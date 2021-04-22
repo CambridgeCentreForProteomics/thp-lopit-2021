@@ -1,0 +1,54 @@
+---
+title: Vignette - Computational proteomics of a THP-1 human leukaemia cell line
+author: "Lisa M Breckels"
+date: "15/04/2021"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: vignette
+  fig_caption: true
+---
+
+# Abstract
+This vignette contains the pipeline used for the computational analysis reported in the paper "Spatiotemporal proteomic profiling of the pro-inflammatory response to lipopolysaccharide in the THP-1 human leukemia cell line" by Mulvey, Breckels et al [1].
+
+# 1. The data
+All raw mass spectrometry proteomics data from this study have been deposited to the [ProteomeXchange](http://proteomecentral.proteomexchange.org/cgi/GetDataset) Consortium via the PRIDE partner repository [2], with the dataset identifier PXD023509. The peptide and protein level datasets are also freely and openly available as part of the [Bioconductor pRolocdata package](https://bioconductor.org/packages/release/data/experiment/html/pRolocdata.html) (≥v1.27.3) [3] and are also available in the supplementary information as disseminated with the accompanying manuscript [1].
+
+All analysis in the manuscript is done in the R programming language, unless otherwise stated, using the suite of mass spectrometry spatial proteomics packages [`MSnbase`](https://www.bioconductor.org/packages/release/bioc/html/MSnbase.html), [`pRoloc`](https://www.bioconductor.org/packages/release/bioc/html/pRoloc.html), [`pRolocGUI`](https://www.bioconductor.org/packages/release/bioc/html/pRolocGUI.html) and [`pRolocdata`](https://bioconductor.org/packages/release/data/experiment/html/pRolocdata.html).
+
+The `pRolocdata` package is a R [Bioconductor](http://bioconductor.org/) [experiment package](http://bioconductor.org/packages/release/BiocViews.html#___ExperimentData) that collects mass spectrometry-based spatial/organelle and protein-complex datasets from published experiments. Each data is stored in a container called a `MSnSet` instance (see the [`MSnbase`](http://www.bioconductor.org/packages/release/bioc/html/MSnbase.html) for details) which allows users to work seamlessly with the R [`pRoloc`](http://bioconductor.org/packages/release/data/experiment/html/pRolocdata.html) and [`pRolocGUI`](http://bioconductor.org/packages/devel/bioc/html/pRolocGUI.html) software for spatial proteomics data analysis and visualisation. 
+
+The first step is to install the `pRoloc` package from Bioconductor and the `devtools` package to access `pRolocdata` on Github
+```{r getpkgs, eval=FALSE}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("pRoloc")
+BiocManager::install("devtools")
+```
+
+Note: We can install the `pRolocdata` package from Bioconductor using the same method e.g. `BiocManager::install("pRolocdata")`  however we require version 1.29.1 which is not yet available on Bioconductor until the next stable release ([Thursday 20th May](http://www.bioconductor.org/developers/release-schedule/)). In the meantime we can access it via Github using the R package `devtools` using the below commands.
+
+```{r devtools_install}
+library("devtools")
+install_github("https://github.com/lgatto/pRolocdata")
+```
+
+Now we can load the packages by calling `library` function in R
+```{r loadpkgs, eval=TRUE}
+library("pRoloc")
+library("pRolocdata")
+```
+
+and subsequently now access all the datasets, type
+
+```{r loadthp}
+data(package = "pRolocdata")
+```
+
+to view all proteomic datasets available in `pRolocdata`. There are 27 datasets these are called
+
+# References
+[1] Mulvey, C.M., Breckels, L.M., et al.
+[2] Perez-Riverol, Y. et al. The PRIDE database and related tools and resources in 2019: improving support for quantification data. Nucleic Acids Res 47, D442-D450, [doi:10.1093/nar/gky1106](doi:10.1093/nar/gky1106) (2019).
+[3] Gatto, L., Breckels, L. M., Wieczorek, S., Burger, T. & Lilley, K. S. Mass-spectrometry-based spatial proteomics data analysis using pRoloc and pRolocdata. Bioinformatics 30, 1322-1324, [doi:10.1093/bioinformatics/btu013](doi:10.1093/bioinformatics/btu013) (2014)
