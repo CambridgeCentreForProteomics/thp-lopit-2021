@@ -17,6 +17,7 @@ All raw mass spectrometry proteomics data from this study have been deposited to
 
 All analysis in the manuscript is done in the R programming language, unless otherwise stated, using the suite of mass spectrometry spatial proteomics packages [`MSnbase`](https://www.bioconductor.org/packages/release/bioc/html/MSnbase.html), [`pRoloc`](https://www.bioconductor.org/packages/release/bioc/html/pRoloc.html), [`pRolocGUI`](https://www.bioconductor.org/packages/release/bioc/html/pRolocGUI.html) and [`pRolocdata`](https://bioconductor.org/packages/release/data/experiment/html/pRolocdata.html).
 
+## Accessing the data in R
 The `pRolocdata` package is a R [Bioconductor](http://bioconductor.org/) [experiment package](http://bioconductor.org/packages/release/BiocViews.html#___ExperimentData) that collects mass spectrometry-based spatial/organelle and protein-complex datasets from published experiments. Each data is stored in a container called a `MSnSet` instance (see the [`MSnbase`](http://www.bioconductor.org/packages/release/bioc/html/MSnbase.html) for details) which allows users to work seamlessly with the R [`pRoloc`](http://bioconductor.org/packages/release/data/experiment/html/pRolocdata.html) and [`pRolocGUI`](http://bioconductor.org/packages/devel/bioc/html/pRolocGUI.html) software for spatial proteomics data analysis and visualisation. 
 
 The first step is to install the `pRoloc` package from Bioconductor and the `devtools` package to access `pRolocdata` on Github
@@ -27,28 +28,109 @@ BiocManager::install("pRoloc")
 BiocManager::install("devtools")
 ```
 
-Note: We can install the `pRolocdata` package from Bioconductor using the same method e.g. `BiocManager::install("pRolocdata")`  however we require version 1.29.1 which is not yet available on Bioconductor until the next stable release ([Thursday 20th May](http://www.bioconductor.org/developers/release-schedule/)). In the meantime we can access it via Github using the R package `devtools` using the below commands.
+Note: We can install the `pRolocdata` package from Bioconductor using the same method e.g. `BiocManager::install("pRolocdata")`  however we require version >=1.29.1 which is not yet available on Bioconductor until the next stable release ([Thursday 20th May](http://www.bioconductor.org/developers/release-schedule/)). In the meantime we can access it via Github using the R package `devtools` using the below commands.
 
-```{r devtools_install}
+```{r devtools_install, eval=FALSE}
 library("devtools")
 install_github("https://github.com/lgatto/pRolocdata")
 ```
 
 Now we can load the packages by calling `library` function in R
-```{r loadpkgs, eval=TRUE}
+```{r loadpkgs, eval=TRUE, warning=FALSE, message=FALSE}
 library("pRoloc")
 library("pRolocdata")
 ```
 
-and subsequently now access all the datasets, type
+and subsequently we can now access all the datasets in `pRolocdata`. To list all available datasets we use the `data` function. 
 
 ```{r loadthp}
 data(package = "pRolocdata")
 ```
 
-to view all proteomic datasets available in `pRolocdata`. There are 27 datasets these are called
+We see there are 27 datasets (including the PSM and protein level data) associated with the manuscript [1], 20 from the hyperLOPIT data anlysis and 7 from the LPS timecourse [1]. For more information on these datasets, we can type
+
+```{r helpdata}
+?thpLOPIT_lps_mulvey2021
+?lpsTimecourse_mulvey2021
+```
+![*Figure 1. Screenshot of the documentation files in R for the THP LOPIT and LPS timecourse datasets*](figures/Screenshot-docs.png)
+
+Each dataset can be loaded using the `data` function. For example, to load the (replicates concatenated) protein level LOPIT datasets for the unstimulated and 12 hour LPS stimulated datasets,
+
+```{r loadadataset}
+data("thpLOPIT_unstimulated_mulvey2021")
+thpLOPIT_unstimulated_mulvey2021
+
+data("thpLOPIT_lps_mulvey2021")
+thpLOPIT_lps_mulvey2021
+```
+
+In the next section we introduce the data, experimental design and brief overview of the experimental protocol before walking users through the downstream analysis.
+
+# 2. Spatial proteomics 
+
+## The hyperLOPIT workflow
+Using the hyperLOPIT proteomics platform [4, 5] we obtained spatial maps that capture the steady-state distribution of thousands of proteins in the THP-1 human leukaemia cell line. Experiments were conducted in triplicate and the samples were analysed and collected when cells were (1) unstimulated and then (2) at 12 hours following stimulation with LPS. 
+
+The hyperLOPIT method combines biochemical cell fractionation with multiplexed high-resolution mass-spectrometry [4, 5], the full protocol and experimental design can be found in [1]. Briefly, TMT labelling was conducted as described in [5] and 20 fractions including the cytosol-enriched fraction were labelled per gradient, by combining two TMT 10-plex experiments in an interleaved labelling design to capture as much subcellular diversity as possible. The experimental design for each dataset is stored in the `pData` slot of each dataset.
+
+To access the full experimental design use the `pData` function
+
+```{r showpdata}
+## TMT experiment data for the unstimulated hyperLOPIT data
+pData(thpLOPIT_unstimulated_mulvey2021)
+
+## TMT labelling scheme for the LPS hyperLOPIT data
+pData(thpLOPIT_lps_mulvey2021)
+```
+
+As described in [1] and [5] the data was processed with Proteome Discoverer v2.1 (Thermo Fisher Scientific) and Mascot server v2.3.02 (Matrix Science) using the SwissProt sequence database for Homo sapiens (www.uniprot.org in November 2016) and the cRAP database (common Repository for Adventitious Proteins, https://www.thegpm.org/crap). Standard filtering of the raw data was conducted as per [1] and [5] to remove contaminants and low abundant PSMs. A maximum of two missing values per TMT experiment was allowed and the data was directly exported from Proteome Discoverer at the PSM level for downstream analysis in R.
+
+The experiments were down in triplicate where each replicate contains data from 2 x TMT 10-plex sets (which we denote as "set 1" and "set 2"). Triplcates were generated for each condition. Thus, in total we conducted a total of 12 experiments, 6 per condition wherein we had 2 sets per replicate containing a total of 20 fractions/channels per replicate.
+
+## PSM data
+The 12 PSM level datasets were imported into R and missing values were carefully assessed. Values missing at random were imputed with the k-Nearest Neighbour algorithm, and values not missing at random (e.g. biologically relevant missing values such as those resulting from the absence of the low abundance of ions) were imputed with a left-censored deterministic minimal value approach. PSMs were quality controlled post-imputation and then combined to protein level by calculating the median of all PSM intensities corresponding to the leading Uniprot Accession number for each protein group.
+
+Load the PSM level unstimulated data,
+```{r psmdata}
+## Unstimulated data
+data("psms_thpLOPIT_unstim_rep1_set1")
+data("psms_thpLOPIT_unstim_rep1_set2")
+
+data("psms_thpLOPIT_unstim_rep2_set1")
+data("psms_thpLOPIT_unstim_rep2_set2")
+
+data("psms_thpLOPIT_unstim_rep3_set1")
+data("psms_thpLOPIT_unstim_rep3_set2")
+```
+Load the PSM level 12h-LPS stimulated data,
+```{r psmstimulated}
+## 12h post LPS-stimulated
+data("psms_thpLOPIT_lps_rep1_set1")
+data("psms_thpLOPIT_lps_rep1_set2")
+
+data("psms_thpLOPIT_lps_rep2_set1")
+data("psms_thpLOPIT_lps_rep2_set2")
+
+data("psms_thpLOPIT_lps_rep3_set1")
+data("psms_thpLOPIT_lps_rep3_set2")
+```
+
+
+do imputation
+combine to protein level
+explain missing columns (maybe don't need to do this)
+
+
+# 3. Temporal proteomics analysis
 
 # References
 [1] Mulvey, C.M., Breckels, L.M., et al.
+
 [2] Perez-Riverol, Y. et al. The PRIDE database and related tools and resources in 2019: improving support for quantification data. Nucleic Acids Res 47, D442-D450, [doi:10.1093/nar/gky1106](doi:10.1093/nar/gky1106) (2019).
+
 [3] Gatto, L., Breckels, L. M., Wieczorek, S., Burger, T. & Lilley, K. S. Mass-spectrometry-based spatial proteomics data analysis using pRoloc and pRolocdata. Bioinformatics 30, 1322-1324, [doi:10.1093/bioinformatics/btu013](doi:10.1093/bioinformatics/btu013) (2014)
+
+[4] Christoforou, A. et al. A draft map of the mouse pluripotent stem cell spatial proteome. Nat Commun 7, 8992, doi:10.1038/ncomms9992 (2016).
+
+[5] Mulvey, C. M. et al. Using hyperLOPIT to perform high-resolution mapping of the spatial proteome. Nat Protoc 12, 1110-1135, doi:10.1038/nprot.2017.026 (2017).
