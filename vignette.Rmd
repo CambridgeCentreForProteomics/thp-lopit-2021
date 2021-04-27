@@ -86,10 +86,10 @@ pData(thpLOPIT_lps_mulvey2021)
 
 As described in [1] and [5] the data was processed with Proteome Discoverer v2.1 (Thermo Fisher Scientific) and Mascot server v2.3.02 (Matrix Science) using the SwissProt sequence database for Homo sapiens (www.uniprot.org in November 2016) and the cRAP database (common Repository for Adventitious Proteins, https://www.thegpm.org/crap). Standard filtering of the raw data was conducted as per [1] and [5] to remove contaminants and low abundant PSMs. A maximum of two missing values per TMT experiment was allowed and the data was directly exported from Proteome Discoverer at the PSM level for downstream analysis in R.
 
-The experiments were down in triplicate where each replicate contains data from 2 x TMT 10-plex sets (which we denote as "set 1" and "set 2"). Triplcates were generated for each condition. Thus, in total we conducted a total of 12 experiments, 6 per condition wherein we had 2 sets per replicate containing a total of 20 fractions/channels per replicate.
+The experiments were down in triplicate where each replicate contains data from 2 x TMT 10-plex sets (which we denote as "set 1" and "set 2"). Triplcates were generated for each condition. Thus, in total we conducted a total of 12 experiments, 6 per condition wherein we had 2 sets per replicate containing a total of 20 fractions/channels per replicate. We note that one TMT channel was removed (TMT tag 126 in replicate 2 set 2) in both the unstimulated and stimulated conditions, due to erroneous labelling of insoluble material during the sample preparation for one replicate. The “Average Reporter S/N” value was recalculated for the nine remaining channels in this 10plex and PSMs with a value less than 9.0 were discarded (please see Data Processing in the Supplementary Information of [1]).
 
 ## PSM data
-The 12 PSM level datasets were imported into R and missing values were carefully assessed. Values missing at random were imputed with the k-Nearest Neighbour algorithm, and values not missing at random (e.g. biologically relevant missing values such as those resulting from the absence of the low abundance of ions) were imputed with a left-censored deterministic minimal value approach. PSMs were quality controlled post-imputation and then combined to protein level by calculating the median of all PSM intensities corresponding to the leading Uniprot Accession number for each protein group.
+The 12 PSM level datasets were imported into R and missing values were carefully assessed. 
 
 Load the PSM level unstimulated data,
 ```{r psmdata}
@@ -116,10 +116,52 @@ data("psms_thpLOPIT_lps_rep3_set1")
 data("psms_thpLOPIT_lps_rep3_set2")
 ```
 
+For the purpose of convenient coding we create a list of `MSnSets` datasets for each condition
 
-do imputation
-combine to protein level
-explain missing columns (maybe don't need to do this)
+```{r list}
+psms_unstim <- MSnSetList(
+  list(
+    psms_thpLOPIT_unstim_rep1_set1,
+    psms_thpLOPIT_unstim_rep1_set2,
+    psms_thpLOPIT_unstim_rep2_set1,
+    psms_thpLOPIT_unstim_rep2_set2,
+    psms_thpLOPIT_unstim_rep3_set1,
+    psms_thpLOPIT_unstim_rep3_set2
+))
+
+psms_lps <- MSnSetList(
+  list(
+    psms_thpLOPIT_lps_rep1_set1,
+    psms_thpLOPIT_lps_rep1_set2,
+    psms_thpLOPIT_lps_rep2_set1,
+    psms_thpLOPIT_lps_rep2_set2,
+    psms_thpLOPIT_lps_rep3_set1,
+    psms_thpLOPIT_lps_rep3_set2
+))
+
+## add list names for each dataset
+.nams <- paste0("Rep", rep(1:3, each = 2), "_set", rep(1:2, each = 3))
+names(psms_unstim) <- paste0(.nams, "_unstim")
+names(psms_lps) <- paste0(.nams, "_lps")
+```
+
+We can view the number of PSMs per experiment,
+```{r count_psms}
+sapply(psms_unstim, dim)[1,]
+sapply(psms_lps, dim)[1,]
+```
+
+If we examine the protein group of each PSM with a missing value, we find that there are other PSMs available for quantitation for the majority of proteins. There are still several hundred cases where we only have 1 PSM for a given protein group, so we would lose several hundred proteins per replicate if we were to just remove missing values. We assess the missibg values across all experiments using the `naPlot` function to see if there is a trend in where missing values occur. We find that these accumulate in the first few fractions of the gradient in each experiment, which classically reflect the gradient distribution e.g. PSMs that are often highly mitochondrial have a huge signal in the heavy channels but little elsewhere in the gradient and thus can result in missing values in other channels. It is also common to find biologically relevant missing values such as those resulting from the absence of the low abundance of ions.
+
+```{r naplots}
+par(mfrow = c(4, 3), las = 2, oma = c(8, 1, 1, 1))
+for (i in seq(psms_unstim))
+naplot(psms_unstim[[1]], col = "black", las = 2, reorderColumns = FALSE, main =)
+
+```
+
+We use a pragmatic approach and record all missing value information in the `fData` of each dataset (location and number of NAs) and then use a left-censored deterministic minimal value approach using, `MinDet` in `MSnbase`. PSMs were quality controlled post-imputation and then combined to protein level by calculating the median of all PSM intensities corresponding to the leading Uniprot Accession number for each protein group.
+
 
 
 # 3. Temporal proteomics analysis
