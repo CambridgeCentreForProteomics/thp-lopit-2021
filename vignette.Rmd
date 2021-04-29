@@ -9,10 +9,30 @@ output:
   fig_caption: true
 ---
 
+<style>
+body, h1 {
+  font-size: 15px;
+}
+
+body, h2, h3, h4 {
+  font-size: 14px;
+}
+
+body, td {
+   font-size: 12px;
+}
+code.r{
+  font-size: 11px;
+}
+pre {
+  font-size: 11px
+}
+</style>
+
 # Abstract
 This vignette contains the pipeline used for the computational analysis reported in the paper "Spatiotemporal proteomic profiling of the pro-inflammatory response to lipopolysaccharide in the THP-1 human leukemia cell line" by Mulvey, Breckels et al [1].
 
-# 1. The data
+# The data
 All raw mass spectrometry proteomics data from this study have been deposited to the [ProteomeXchange](http://proteomecentral.proteomexchange.org/cgi/GetDataset) Consortium via the PRIDE partner repository [2], with the dataset identifier PXD023509. The peptide and protein level datasets are also freely and openly available as part of the [Bioconductor pRolocdata package](https://bioconductor.org/packages/release/data/experiment/html/pRolocdata.html) (≥v1.27.3) [3] and are also available in the supplementary information as disseminated with the accompanying manuscript [1].
 
 All analysis in the manuscript is done in the R programming language, unless otherwise stated, using the suite of mass spectrometry spatial proteomics packages [`MSnbase`](https://www.bioconductor.org/packages/release/bioc/html/MSnbase.html), [`pRoloc`](https://www.bioconductor.org/packages/release/bioc/html/pRoloc.html), [`pRolocGUI`](https://www.bioconductor.org/packages/release/bioc/html/pRolocGUI.html) and [`pRolocdata`](https://bioconductor.org/packages/release/data/experiment/html/pRolocdata.html).
@@ -26,6 +46,10 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 BiocManager::install("pRoloc")
 BiocManager::install("devtools")
+
+## we also use the knitr and VennDiagram, ggplot2 packages in this 
+## vignette so please  install if you do not have them 
+BiocManager::install(c("knitr", "VennDiagram", "ggplot2", "dplyr", "kableExtra"))
 ```
 
 Note: We can install the `pRolocdata` package from Bioconductor using the same method e.g. `BiocManager::install("pRolocdata")`  however we require version >=1.29.1 which is not yet available on Bioconductor until the next stable release ([Thursday 20th May](http://www.bioconductor.org/developers/release-schedule/)). In the meantime we can access it via Github using the R package `devtools` using the below commands.
@@ -55,9 +79,9 @@ We see there are 27 datasets (including the PSM and protein level data) associat
 ```
 ![*Figure 1. Screenshot of the documentation files in R for the THP LOPIT and LPS timecourse datasets*](figures/Screenshot-docs.png)
 
-Each dataset can be loaded using the `data` function. For example, to load the (replicates concatenated) protein level LOPIT datasets for the unstimulated and 12 hour LPS stimulated datasets,
+Each dataset can be loaded using the `data` function. For example, to load the final protein level LOPIT datasets for the unstimulated and 12 hour LPS stimulated datasets,
 
-```{r loadadataset}
+```{r loadadataset, results = "hide"}
 data("thpLOPIT_unstimulated_mulvey2021")
 thpLOPIT_unstimulated_mulvey2021
 
@@ -67,7 +91,7 @@ thpLOPIT_lps_mulvey2021
 
 In the next section we introduce the data, experimental design and brief overview of the experimental protocol before walking users through the downstream analysis.
 
-# 2. Spatial proteomics 
+# 1. Spatial proteomics 
 
 ## The hyperLOPIT workflow
 Using the hyperLOPIT proteomics platform [4, 5] we obtained spatial maps that capture the steady-state distribution of thousands of proteins in the THP-1 human leukaemia cell line. Experiments were conducted in triplicate and the samples were analysed and collected when cells were (1) unstimulated and then (2) at 12 hours following stimulation with LPS. 
@@ -86,9 +110,11 @@ pData(thpLOPIT_lps_mulvey2021)
 
 As described in [1] and [5] the data was processed with Proteome Discoverer v2.1 (Thermo Fisher Scientific) and Mascot server v2.3.02 (Matrix Science) using the SwissProt sequence database for Homo sapiens (www.uniprot.org in November 2016) and the cRAP database (common Repository for Adventitious Proteins, https://www.thegpm.org/crap). Standard filtering of the raw data was conducted as per [1] and [5] to remove contaminants and low abundant PSMs. A maximum of two missing values per TMT experiment was allowed and the data was directly exported from Proteome Discoverer at the PSM level for downstream analysis in R.
 
-The experiments were down in triplicate where each replicate contains data from 2 x TMT 10-plex sets (which we denote as "set 1" and "set 2"). Triplcates were generated for each condition. Thus, in total we conducted a total of 12 experiments, 6 per condition wherein we had 2 sets per replicate containing a total of 20 fractions/channels per replicate. We note that one TMT channel was removed (TMT tag 126 in replicate 2 set 2) in both the unstimulated and stimulated conditions, due to erroneous labelling of insoluble material during the sample preparation for one replicate. The “Average Reporter S/N” value was recalculated for the nine remaining channels in this 10plex and PSMs with a value less than 9.0 were discarded (please see Data Processing in the Supplementary Information of [1]).
+The experiments were done in triplicate for each condition and each replicate contains 2 x TMT 10-plex sets (which we denote as "set 1" and "set 2"). Thus, in total we conducted a total of 12 experiments, 6 per condition wherein we had 2 sets per replicate containing a total of 20 fractions/channels per replicate. One TMT channel was removed (TMT tag 126 in replicate 2, set 2 in the unstimulated) due to erroneous labelling of insoluble material during the sample preparation for this specific tag. The “Average Reporter S/N” value was recalculated for the nine remaining channels in the corresponding 10plex set and PSMs with a value less than 9.0 were discarded (please see Data Processing in the Supplementary Information of [1]).
 
-## PSM data
+## PSM level data processing
+
+### Missing values assessment
 The 12 PSM level datasets were imported into R and missing values were carefully assessed. 
 
 Load the PSM level unstimulated data,
@@ -103,6 +129,7 @@ data("psms_thpLOPIT_unstim_rep2_set2")
 data("psms_thpLOPIT_unstim_rep3_set1")
 data("psms_thpLOPIT_unstim_rep3_set2")
 ```
+
 Load the PSM level 12h-LPS stimulated data,
 ```{r psmstimulated}
 ## 12h post LPS-stimulated
@@ -116,53 +143,238 @@ data("psms_thpLOPIT_lps_rep3_set1")
 data("psms_thpLOPIT_lps_rep3_set2")
 ```
 
-For the purpose of convenient coding we create a list of `MSnSets` datasets for each condition
-
+For ease of coding we create a list of `MSnSets` for each condition
 ```{r list}
-psms_unstim <- MSnSetList(
+psms <- MSnSetList(
   list(
     psms_thpLOPIT_unstim_rep1_set1,
     psms_thpLOPIT_unstim_rep1_set2,
     psms_thpLOPIT_unstim_rep2_set1,
     psms_thpLOPIT_unstim_rep2_set2,
     psms_thpLOPIT_unstim_rep3_set1,
-    psms_thpLOPIT_unstim_rep3_set2
-))
-
-psms_lps <- MSnSetList(
-  list(
+    psms_thpLOPIT_unstim_rep3_set2,
     psms_thpLOPIT_lps_rep1_set1,
     psms_thpLOPIT_lps_rep1_set2,
     psms_thpLOPIT_lps_rep2_set1,
     psms_thpLOPIT_lps_rep2_set2,
     psms_thpLOPIT_lps_rep3_set1,
     psms_thpLOPIT_lps_rep3_set2
-))
+  )
+)
 
 ## add list names for each dataset
-.nams <- paste0("Rep", rep(1:3, each = 2), "_set", rep(1:2, each = 3))
-names(psms_unstim) <- paste0(.nams, "_unstim")
-names(psms_lps) <- paste0(.nams, "_lps")
+.nams <- paste0("Rep", rep(1:3, each = 2), "_set", rep(1:2, 3))
+names(psms) <- c(paste0(.nams, "_unstim"), paste0(.nams, "_lps"))
 ```
 
 We can view the number of PSMs per experiment,
 ```{r count_psms}
-sapply(psms_unstim, dim)[1,]
-sapply(psms_lps, dim)[1,]
+sapply(psms, nrow)
 ```
 
-If we examine the protein group of each PSM with a missing value, we find that there are other PSMs available for quantitation for the majority of proteins. There are still several hundred cases where we only have 1 PSM for a given protein group, so we would lose several hundred proteins per replicate if we were to just remove missing values. We assess the missibg values across all experiments using the `naPlot` function to see if there is a trend in where missing values occur. We find that these accumulate in the first few fractions of the gradient in each experiment, which classically reflect the gradient distribution e.g. PSMs that are often highly mitochondrial have a huge signal in the heavy channels but little elsewhere in the gradient and thus can result in missing values in other channels. It is also common to find biologically relevant missing values such as those resulting from the absence of the low abundance of ions.
+If we examine the corresponding protein group of each PSM with a missing value, we find that there are other PSMs available for quantitation for the majority of proteins. There are still several hundred cases where we only have 1 PSM for a given protein group, so we would lose several hundred proteins per replicate if we were to just remove these PSMs. We assess the missing values across all experiments using the `naPlot` function to see if there is a trend in where missing values occur. 
 
-```{r naplots}
-par(mfrow = c(4, 3), las = 2, oma = c(8, 1, 1, 1))
-for (i in seq(psms_unstim))
-naplot(psms_unstim[[1]], col = "black", las = 2, reorderColumns = FALSE, main =)
+Generate `naPlots`,
 
+```{r naplots, eval=FALSE}
+for (i in seq(psms)) {
+  par(las = 2, oma = c(10, 1, 1, 1))
+  naplot(psms[[i]], col = "black", las = 2, reorderColumns = FALSE, 
+         main = names(psms)[i], cex.axis = 2)
+}
+```
+![](figures/naplot_unstim.png)
+![*Figure 2. Heatmaps showing missing value distributions per set and replciate*](figures/naplot_lps.png)
+*Figure 2. Heatmaps showing missing value distributions per set and replciate*
+
+The above `naPlots` show that missing values tend to accumulate at the end of the gradient, and more specifically in the first few fractions of the gradient of each experiment, which classically reflect the gradient distribution e.g. PSMs that are often highly mitochondrial have a huge signal in the heavy channels but little elsewhere in the gradient and thus can result in missing values in the other channels. It is also common to find biologically relevant missing values such as those resulting from the absence of the low abundance of ions. As values do not appear to be missing at random we use a left-censored deterministic minimal value approach, `MinDet` in `MSnbase`.
+
+```{r mindet, warning=FALSE, message=FALSE}
+psms.imputed <- lapply(psms, function(z) impute(z, method = "MinDet"))
 ```
 
-We use a pragmatic approach and record all missing value information in the `fData` of each dataset (location and number of NAs) and then use a left-censored deterministic minimal value approach using, `MinDet` in `MSnbase`. PSMs were quality controlled post-imputation and then combined to protein level by calculating the median of all PSM intensities corresponding to the leading Uniprot Accession number for each protein group.
+PSMs were quality controlled post-imputation and then combined to protein level by calculating the median of all PSM intensities corresponding to the leading Uniprot Accession number for each protein group.
+
+### Normalise
+
+Following the standard [pRoloc workflow](https://f1000research.com/articles/5-2926) [6] PSMs are scaled into the same intensity interval by dividing each intensity by the `sum` of the intensities for that quantitative feature. This transformation of the data assures cancellation of the effect of the absolute intensities of the quantitative features along the rows, and focuses subsequent analyses on the relative profiles along the sub-cellular channels. This is important as De Duve's...
+
+```{r norm}
+psms.imputed.norm <- lapply(psms.imputed, function(z) normalise(z,  "sum"))
+```
+
+### Aggregate to protein level
+
+We use **all** available PSMs for quantification and aggregate PSMs to proteins using the `combineFeatures` function in `MSnbase` by calculating the median of all PSM intensities corresponding to the leading Uniprot Accession number for each protein group.
+
+```{r aggregate}
+prots <- lapply(psms.imputed.norm, function(z) 
+  combineFeatures(z, method = "median",
+                  groupBy = fData(z)[, "Master.Protein.Accessions"]))
+
+## become combining all protein sets we tidy up the feature labels of the dataset
+ll <- paste0(rep(c("unst", "lps"), 1, each = 6), ".r",
+             rep(1:3, 1, each = 2), ".s", 1:2)
+for (i in seq(prots)) {
+  prots@x[[i]] <- updateFvarLabels(prots[[i]], label = ll[i], sep = "_")
+}
+
+## combine TMT sets and examine each replicate for each condition
+unst_r1 <- filterNA(MSnbase::combine(prots[[1]], prots[[2]]))
+unst_r2 <- filterNA(MSnbase::combine(prots[[3]], prots[[4]]))
+unst_r3 <- filterNA(MSnbase::combine(prots[[5]], prots[[6]]))
+lps_r1 <- filterNA(MSnbase::combine(prots[[7]], prots[[8]]))
+lps_r2 <- filterNA(MSnbase::combine(prots[[9]], prots[[10]]))
+lps_r3 <- filterNA(MSnbase::combine(prots[[11]], prots[[12]]))
 
 
+tot_prots <- data.frame("Unstimulated" = c(`Replicate 1` = nrow(unst_r1), 
+                                           `Replicate 2` = nrow(unst_r2), 
+                                           `Replicate 3`= nrow(unst_r3)),
+                        "Stimulated 12h-LPS" = c(`Replicate 1` = nrow(lps_r1), 
+                                                 `Replicate 2` = nrow(lps_r2), 
+                                                 `Replicate 3` = nrow(lps_r3)))
+           
+                            
+```
+
+```{r kableoutput, warning=FALSE, message=FALSE}
+library("knitr")
+library("kableExtra")
+kable(tot_prots, caption = "Number of quantified proteins per replicate per condition") %>%
+  kable_minimal()
+```
+
+## Protein level data processing
+As shown in the above section we quantify between ~4800-5800 proteins per replicate. The below Venn diagrams show the overlap between replicates within conditions. We find 3882 proteins common in the unstimulated hyperLOPIT experiment and 4067 in the 12h-LPS stimulated hyperLOPIT experiment.
+
+```{r venns, warning=FALSE, message=FALSE, eval=FALSE}
+## Load R packages required for genetrating Venn diagrams
+library("VennDiagram")
+library("scales")
+library("ggplot2")
+
+venn.diagram(
+  x = list(featureNames(unst_r1), featureNames(unst_r2), featureNames(unst_r3)),
+  category.names = c("Replicate 1" , "Replicate 2 " , "Replicate 3"),
+  filename = "venn_unst_replicates.png",
+  main = "Unstimulated hyperLOPIT",
+  col=c("#440154ff", '#21908dff', '#fde725ff'),
+  fill = c(alpha("#440154ff",0.3), alpha('#21908dff',0.3), alpha('#fde725ff',0.3)),
+  fontfamily = "sans",
+  cat.fontfamily = "sans",
+  main.fontfamily = "sans",
+  cat.col = c("#440154ff", '#21908dff', '#fde725ff'), 
+  output = FALSE
+)
+
+venn.diagram(
+  x = list(featureNames(lps_r1), featureNames(lps_r2), featureNames(lps_r3)),
+  category.names = c("Replicate 1" , "Replicate 2 " , "Replicate 3"),
+  filename = "venn_lps_replicates.png",
+  main = "LPS stimulated hyperLOPIT 12h-LPS",
+  col=c("#440154ff", '#21908dff', '#fde725ff'),
+  fill = c(alpha("#440154ff",0.3), alpha('#21908dff',0.3), alpha('#fde725ff',0.3)),
+  fontfamily = "sans",
+  cat.fontfamily = "sans",
+  main.fontfamily = "sans",
+  cat.col = c("#440154ff", '#21908dff', '#fde725ff')
+)
+```
+
+```{r venn1, echo=FALSE, fig.cap="Figure 3. Overlap of protein groups identified between replicated experiments", out.height = '80px', fig.show='hold',fig.align='center'}
+knitr::include_graphics("figures/venn.png")
+```
+
+*(Venn diagrams as per supplementary figure 1 of [1])*
+
+## Dataset concatenation
+We use the `combine` function in `MSnbase` to perform data fusion (concatenation) within each condition to maximise subcellular resolution and thus the reliability in protein classification [as per the pRoloc pipeline [5, 6] and in [7]]. Trotter et al. [7] have shown a significant improvement in classifier accuracy when combining replicated experiments in spatial proteomics. Specifically, we concatenate all gradient fractions across replicated experiments to give better discrimination between subcellular niches (as shown in [7]) which gives users the opportunity to resolve niches that may not have been discovered when examining replicates alone. 
+
+We note (as explained in [5, 6]) that direct comparisons of individual TMT channels in replicated experiments do not provide an adequate, goal-driven assessment of different experiments due to the nature of the gradient fraction collection, where quantitative channels do not correspond to identical selected fractions along the gradient. 
+
+Concatenate replicates for each condition,
+```{r combineall}
+## combine replicates for each condition
+unst_full <- filterNA(MSnbase::combine(unst_r1, unst_r2))
+unst_full <- filterNA(MSnbase::combine(unst_full, unst_r3)) 
+
+lps_full <- filterNA(MSnbase::combine(lps_r1, lps_r2))
+lps_full <- filterNA(MSnbase::combine(lps_full, lps_r3)) 
+```
+```{r vennintersect, eval=FALSE}
+venn.diagram(
+  x = list(featureNames(unst_full), featureNames(lps_full)),
+  category.names = c("Unstimulated" , "LPS-stimulated"),
+  filename = "venn_hyperLOPIT.png",
+  main = "Subset of common proteins between hyperLOPIT conditions",
+  col=c("#440154ff", '#21908dff'),
+  fill = c(alpha("#440154ff",0.3), alpha('#21908dff',0.3)),
+  fontfamily = "sans",
+  cat.fontfamily = "sans",
+  main.fontfamily = "sans",
+  cat.col = c("#440154ff", '#21908dff'),
+  margin = 0.05,
+  cat.pos = c(-140, 140),
+  cat.dist = c(0.05, 0.05)
+)
+```
+
+```{r venn2, echo=FALSE, out.width = '300px', fig.align='center'}
+knitr::include_graphics("figures/venn_hyperlopit_all.png")
+```
+*Figure 4. Overlap of protein groups identified in both conditions*
+
+We find 3288 proteins common all 12 experiments. In the next code chunk we subset our data to keep only proteins common between all experiments. 
+
+### Final hyperLOPIT datasets for downstream analysis
+Subset for common proteins in all replicates and all conditions,
+```{r commonall, eval=TRUE}
+## keep only those in common between conditions
+cmn <- intersect(featureNames(unst_full), featureNames(lps_full))
+lps <- lps_full[cmn, ]
+unst <- unst_full[cmn, ]
+```
+
+### Adding marker proteins
+A list of 783 annotated, unambiguous resident organelle marker proteins from 11 subcellular niches: mitochondria, ER, Golgi apparatus, lysosome, peroxisome, PM, nucleus, nucleolus, chromatin, ribosome and cytosol, were curated from [The Uniprot database](https://www.uniprot.org), [Gene Ontology](https://www.ebi.ac.uk/QuickGO/) and from careful mining of the literature. Only proteins known to localise to a single location were included as markers.
+
+We use the `addMarkers` function in `pRoloc` to annotate our two datasets from this list of markers (found in the `csv` directory of this repository). The marker list can also be extracted from `pRolocdata` by using the `getMarkers` function with any of the THP datasets.
+
+Adding markers,
+```{r addmarkers, eval=TRUE}
+lps <- addMarkers(lps, markers = "csv/markers_2019.28.01.csv")
+unst <- addMarkers(unst, markers = "csv/markers_2019.28.01.csv")
+```
+
+### Visualising the data
+We use t-Distributed Stochastic Neighbor Embedding (t-SNE) for projecting our 60 dimension data into two-dimensions to visualisation organelle separation. 
+
+In the below code chunk we visualise the subcellular markers on each dataset (Figure 4 of [1]),
+```{r plotit, fig.width=10, fig.height=5}
+## set organelle colours
+mycol <- c("#88CCEE", "#332288", "#53CAB7", "#0170b4", "#204f20", "#990000",
+           "#E69F00", "#DDCC77", "#E18493", "#AA4499", "#D55E00",  "#7E7E30")
+setStockcol(mycol)
+setUnknownpch(16)
+
+
+## Generate the t-SNE coords (Figure 4 of [1])
+set.seed(399)
+tsne_unst <- plot2D(unst, method = "t-SNE", plot = FALSE)
+set.seed(399)
+tsne_lps <- plot2D(lps, method = "t-SNE", plot = FALSE)
+
+
+## plot the data as t-SNE maps
+par(mfrow = c(1, 2))        
+plot2D(tsne_unst, method = "none", methargs = list(unst), 
+       fcol = "markers", main = "Unstimulated THP1-cells")
+plot2D(tsne_lps, method = "none", methargs = list(lps),  
+       fcol = "markers", main = "12h-LPS Stimulated THP1-cells")
+
+addLegend(lps, where = "topleft", cex = .6)
+```
 
 # 3. Temporal proteomics analysis
 
@@ -176,3 +388,7 @@ We use a pragmatic approach and record all missing value information in the `fDa
 [4] Christoforou, A. et al. A draft map of the mouse pluripotent stem cell spatial proteome. Nat Commun 7, 8992, doi:10.1038/ncomms9992 (2016).
 
 [5] Mulvey, C. M. et al. Using hyperLOPIT to perform high-resolution mapping of the spatial proteome. Nat Protoc 12, 1110-1135, doi:10.1038/nprot.2017.026 (2017).
+
+[6] f1000 workflow
+
+[7] Trotter
