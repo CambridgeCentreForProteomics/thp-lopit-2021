@@ -49,7 +49,7 @@ BiocManager::install("devtools")
 
 ## we also use the knitr and VennDiagram, ggplot2 packages in this 
 ## vignette so please  install if you do not have them 
-BiocManager::install(c("knitr", "VennDiagram", "ggplot2", "dplyr", "kableExtra"))
+BiocManager::install(c("knitr", "VennDiagram", "ggplot2", "dplyr", "kableExtra", "coda"))
 ```
 
 Note: We can install the `pRolocdata` package from Bioconductor using the same method e.g. `BiocManager::install("pRolocdata")`  however we require version >=1.29.1 which is not yet available on Bioconductor until the next stable release ([Thursday 20th May](http://www.bioconductor.org/developers/release-schedule/)). In the meantime we can access it via Github using the R package `devtools` using the below commands.
@@ -197,7 +197,7 @@ PSMs were quality controlled post-imputation and then combined to protein level 
 
 ### Normalise
 
-Following the standard [pRoloc workflow](https://f1000research.com/articles/5-2926) [6] PSMs are scaled into the same intensity interval by dividing each intensity by the `sum` of the intensities for that quantitative feature. This transformation of the data assures cancellation of the effect of the absolute intensities of the quantitative features along the rows, and focuses subsequent analyses on the relative profiles along the sub-cellular channels. This is important as De Duve's...
+Following the standard [pRoloc workflow](https://f1000research.com/articles/5-2926) [6] PSMs are scaled into the same intensity interval by dividing each intensity by the `sum` of the intensities for that quantitative feature. This transformation of the data assures cancellation of the effect of the absolute intensities of the quantitative features along the rows, and focuses subsequent analyses on the relative profiles along the sub-cellular channels. This is important for spatial proteomic experiments are proteins that co-localise in a cell are known to exhibit similar quantitative profiles across the gradient fractions employed [8].
 
 ```{r norm}
 psms.imputed.norm <- lapply(psms.imputed, function(z) normalise(z,  "sum"))
@@ -348,9 +348,10 @@ unst <- addMarkers(unst, markers = "csv/markers_2019.28.01.csv")
 ```
 
 ### Visualising the data
-We use t-Distributed Stochastic Neighbor Embedding (t-SNE) for projecting our 60 dimension data into two-dimensions to visualisation organelle separation. 
+We use t-Distributed Stochastic Neighbor Embedding (t-SNE) to project our 60 dimension data into two-dimensions to visualise organelle separation. 
 
-In the below code chunk we visualise the subcellular markers on each dataset (Figure 4 of [1]),
+In the below code chunk we plot the data and highlight the subcellular markers on each dataset (Figure 4 of [1]). Each point represents one protein. Markers are highlighted by different colours as denoted by the key and proteins for the subcellular location is unknown or undefined are grey.
+
 ```{r plotit, fig.width=10, fig.height=5}
 ## set organelle colours
 mycol <- c("#88CCEE", "#332288", "#53CAB7", "#0170b4", "#204f20", "#990000",
@@ -369,12 +370,121 @@ tsne_lps <- plot2D(lps, method = "t-SNE", plot = FALSE)
 ## plot the data as t-SNE maps
 par(mfrow = c(1, 2))        
 plot2D(tsne_unst, method = "none", methargs = list(unst), 
-       fcol = "markers", main = "Unstimulated THP1-cells")
+       fcol = "markers", main = "Subcellular markers\nunstimulated THP1-cells")
 plot2D(tsne_lps, method = "none", methargs = list(lps),  
-       fcol = "markers", main = "12h-LPS Stimulated THP1-cells")
-
+       fcol = "markers", main = "Subcellular markers12h-LPS stimulated THP1-cells")
 addLegend(lps, where = "topleft", cex = .6)
 ```
+*Figure 5. t-SNE plots of the (concatenated) LOPIT datasets for each condition (Figure 4 of [1])*
+
+
+## Classification
+Proteins are assigned to one of the 11 subcellular marker classes using TAGM-MCMC [9]. TAGM-MCMC is a semi-supervised Bayesian generative classifier based on a T-Augmented Gaussian Mixture model that uses Bayesian computation performed using Markov-chain Monte Carlo. It is one of the many supervised machine learning methods available in the `pRoloc` package, but currently the only Bayesian method that is available in the package for the prediction of subcellular location for spatial proteomics data. 
+
+The advantage of using TAGM, and Bayesian methods in general, over classic supervised machine learning approaches is the ability for the algorithm to quantify the localisation uncertainty. The TAGM classifier models each annotated subcellular class using a Gaussian distribution and thus the full dataset can be modelled as a mixture of Gaussians. As described in [9] an outlier component probability is also included in this model which is mathematically described as a multivariate student’s t-distribution which gives extra information regarding the 
+
+Full details of the TAGM Bayesian methodology and mathematics are found in [9] and a detailed Bioconductor workflow for Bayesian analysis of spatial proteomoics data can be found in [10]. We follow this workflow for the analysis used here. 
+
+Following Crook et al [10] we take the concatenated datasets for each conditions and run the TAGM-MCMC workflow. A collapsed Gibbs sampler was run in parallel for 9 chains to sample from the posterior distributions of localisation probabilites, with each chain run for 25,000 iterations and the Gelman-Rubin’s diagnostic was used to assess the convergence of the 9 Markov-Chains and the 3 best chains were kept and pooled for data processing for each condition.
+
+In the code chunk below we show how to run the `tagmMcmcTrain` function to generate the samples from the posterior distributions of each dataset (note: we do not run this dynamically as running is computationally intensive. We suggest you use a cluster or HPC if you have one available and scale according to the cores and `numChains` used)
+
+```{r tagm, eval=FALSE}
+## Load the coda library for calculating the Gelman  diagnostics
+library("coda")
+
+## Train TAGM-MCMC
+p_lps <- tagmMcmcTrain(object = lps,
+                       numIter = 25000,
+                       burnin = 5000,
+                       thin = 10,
+                       numChains = 9)
+
+p_unst <- tagmMcmcTrain(object = unst,
+                        numIter = 25000,
+                        burnin = 5000,
+                        thin = 10,
+                        numChains = 9)
+
+## All chains look good and all oscillate around an average of 490 outliers
+out_unst <- mcmc_get_outliers(p_unst)
+out_lps <- mcmc_get_outliers(p_lps)
+
+## Calculate Gelman's Diagnostic
+gelman.diag(out_unst)   
+gelman.diag(out_lps)
+
+# check all pairs as per the f1000 vignette [10]
+gelman.diag(out_unst[1:2])
+gelman.diag(out_unst[1:3]) # etc...
+```
+
+Following the TAGM workflow [10] we examine the chains for convergence and indeed find all chains look good and oscillate around and average of 490 outliers. We calculate the Gelman and Rubin  Diagnostic [11] for a more rigorous and unbiased analysis of convergence. This statistic is often referred to as R̂ or the potential scale reduction factor and Geman and Rubin suggest that chains with a R̂ < 1.2 are likely to have converged. We find all to be < 1.2. We pick the 5 best chains for each dataset which yields the lowest upper confidence interval (as per [10]). These are then passed to `mcmc_pool_chains` and `tagmMcmcProcess` where the the summary slot of the `MCMCParams` object is populated with basic summaries of the `MCMCChains`, such as allocations and localisation probabilities. 
+
+```{r populate, eval=FALSE}
+mcmc_unst_pooled <- mcmc_pool_chains(mcmc_unst)
+mcmc_lps_pooled <- mcmc_pool_chains(mcmc_lps)
+
+mcmc_unst_pooled <- tagmMcmcProcess(mcmc_unst_pooled)
+mcmc_lps_pooled <- tagmMcmcProcess(mcmc_lps_pooled)
+
+summary(mcmc_unst_pooled@summary@posteriorEstimates)
+summary(mcmc_unst_pooled@summary@tagm.joint)
+
+summary(mcmc_lps_pooled@summary@posteriorEstimates)
+summary(mcmc_lps_pooled@summary@tagm.joint)
+
+mcmc_lps <- mcmc_lps_pooled
+mcmc_unst <- mcmc_unst_pooled
+```
+
+Finally, we use the `tagmMcmcPredict` function to obtain the full probability distribution over all proteins. 
+
+```{r predict, eval=FALSE}
+unst <- tagmMcmcPredict(unst, params = mcmc_unst_pooled, probJoint = TRUE)
+lps <- tagmMcmcPredict(lps, params = mcmc_lps_pooled, probJoint = TRUE)
+```
+
+The TAGM results are appended to the `fData` slot of the datasets. As the above chunk is not run dynamically here we can load the results from the `pRolocdata` package (and they can also be found in Supplementary Table XXX of [1]). We load the datasets called `thpLOPIT_unstimulated_mulvey2021` and `thpLOPIT_lps_mulvey2021` which contain all machine learning results from [1]. As per the above the analysis this was conducted on proteins common in all experiments.
+
+```{r seeresults, fig.width=10, fig.height=5}
+data("thpLOPIT_lps_mulvey2021")
+data("thpLOPIT_unstimulated_mulvey2021")
+
+## We subset for proteins common in all experiments
+cmn <- intersect(featureNames(thpLOPIT_lps_mulvey2021), featureNames(thpLOPIT_unstimulated_mulvey2021))
+unst <- thpLOPIT_unstimulated_mulvey2021[cmn, ]
+lps <- thpLOPIT_lps_mulvey2021[cmn, ]
+
+## Generate the t-SNE coords 
+set.seed(399)
+tsne_unst <- plot2D(unst, method = "t-SNE", plot = FALSE)
+set.seed(399)
+tsne_lps <- plot2D(lps, method = "t-SNE", plot = FALSE)
+
+## plot TAGM assignments
+par(mfrow = c(1, 2)) 
+mycol <- paste0(getStockcol(), 50)
+plot2D(tsne_unst, method = "none", methargs = list(unst), 
+       fcol = "tagm.mcmc.allocation", col = mycol,
+       main = "TAGM-MCMC allocation\n unstimulated THP1-cells")
+plot2D(tsne_lps, method = "none", methargs = list(unst), 
+       fcol = "tagm.mcmc.allocation", col = mycol,
+       main = "TAGM-MCMC allocation\n 12h-LPS stimulated THP1-cells")
+addLegend(lps, where = "topleft", cex = .6)
+```
+
+The results from the TAGM-MCMC method are appended to the `fData` of the `MSnSet` e.g. see `fData(thpLOPIT_unstimulated_mulvey2021)$tagm.mcmc.allocation` and `fvarLabels(thpLOPIT_unstimulated_mulvey2021)` to see all available slots.
+
+Relevent to this analysis we examine the following slots
+- `tagm.mcmc.allocation`:  the TAGM-MCMC predictions for the most probable protein sub-cellular allocation.
+- `tagm.mcmc.probability`: the *mean* posterior probability for the protein sub-cellular allocations
+- `tagm.mcmc.outlier`: the posterior probability for the protein to belong to the outlier component.
+- `tagm.mcmc.probability.lowerquantile` and `tagm.mcmc.probability.upperquantile` are the lower and upper boundaries to the equi-tailed 95% credible interval of tagm.mcmc.probability.
+
+
+
+## Translocations
 
 # 3. Temporal proteomics analysis
 
@@ -392,3 +502,12 @@ addLegend(lps, where = "topleft", cex = .6)
 [6] f1000 workflow
 
 [7] Trotter
+
+[8] De Duve
+
+[9] TAGM
+
+[10] https://f1000research.com/articles/8-446 TAGM workflow
+
+[11] Gelman, A and Rubin, DB (1992) Inference from iterative simulation using multiple sequences, Statistical Science, 7, 457-511.
+
