@@ -1,31 +1,42 @@
 ---
-title: Vignette - Computational proteomics of a THP-1 human leukaemia cell line
+title: Computational proteomics of a THP-1 human leukaemia cell line
 author: "Lisa M Breckels"
 date: "15/04/2021"
+fontsize: 10pt 
 output:
-  prettydoc::html_pretty:
-    theme: leonids
-    highlight: vignette
-  fig_caption: true
+  rmdformats::robobook:
+    theme: default
+    fig_caption: true
+    use_bookdown: true
 ---
 
 <style>
-body, h1 {
-  font-size: 15px;
+.book .book-body .page-inner section.normal h1 {
+  font-size: 12px;
 }
 
-body, h2, h3, h4 {
+.book .book-body .page-inner section.normal h2, 
+.book .book-body .page-inner section.normal h3, 
+.book .book-body .page-inner section.normal h4 {
   font-size: 14px;
 }
 
-body, td {
+.book .book-body .page-inner section.normal table  td {
    font-size: 12px;
 }
-code.r{
-  font-size: 11px;
+.book .book-body .page-inner section.normal pre>code.r {
+  font-size: 10px;
 }
-pre {
-  font-size: 11px
+.book .book-body .page-inner section.normal pre {
+  font-size: 10px
+}
+
+ul li.title {
+  visibility: hidden;
+}
+ul li.title:before {
+  visibility: visible;
+  content: "Spatial & Temporal Proteomics Vignette";
 }
 </style>
 
@@ -49,7 +60,8 @@ BiocManager::install("devtools")
 
 ## we also use the knitr and VennDiagram, ggplot2 packages in this 
 ## vignette so please  install if you do not have them 
-BiocManager::install(c("knitr", "VennDiagram", "ggplot2", "dplyr", "kableExtra", "coda"))
+BiocManager::install(c("knitr", "VennDiagram", "ggplot2", "dplyr", "kableExtra", "coda", "reshape2"))
+source("R/intersection.R")
 ```
 
 Note: We can install the `pRolocdata` package from Bioconductor using the same method e.g. `BiocManager::install("pRolocdata")`  however we require version >=1.29.1 which is not yet available on Bioconductor until the next stable release ([Thursday 20th May](http://www.bioconductor.org/developers/release-schedule/)). In the meantime we can access it via Github using the R package `devtools` using the below commands.
@@ -91,7 +103,7 @@ thpLOPIT_lps_mulvey2021
 
 In the next section we introduce the data, experimental design and brief overview of the experimental protocol before walking users through the downstream analysis.
 
-# 1. Spatial proteomics 
+# Spatial proteomics data analysis
 
 ## The hyperLOPIT workflow
 Using the hyperLOPIT proteomics platform [4, 5] we obtained spatial maps that capture the steady-state distribution of thousands of proteins in the THP-1 human leukaemia cell line. Experiments were conducted in triplicate and the samples were analysed and collected when cells were (1) unstimulated and then (2) at 12 hours following stimulation with LPS. 
@@ -205,7 +217,7 @@ psms.imputed.norm <- lapply(psms.imputed, function(z) normalise(z,  "sum"))
 
 ### Aggregate to protein level
 
-We use **all** available PSMs for quantification and aggregate PSMs to proteins using the `combineFeatures` function in `MSnbase` by calculating the median of all PSM intensities corresponding to the leading Uniprot Accession number for each protein group.
+We use all available PSMs for quantification and aggregate PSMs to proteins using the `combineFeatures` function in `MSnbase` by calculating the median of all PSM intensities corresponding to the leading Uniprot Accession number for each protein group.
 
 ```{r aggregate}
 prots <- lapply(psms.imputed.norm, function(z) 
@@ -231,7 +243,7 @@ lps_r3 <- filterNA(MSnbase::combine(prots[[11]], prots[[12]]))
 tot_prots <- data.frame("Unstimulated" = c(`Replicate 1` = nrow(unst_r1), 
                                            `Replicate 2` = nrow(unst_r2), 
                                            `Replicate 3`= nrow(unst_r3)),
-                        "Stimulated 12h-LPS" = c(`Replicate 1` = nrow(lps_r1), 
+                        "LPS" = c(`Replicate 1` = nrow(lps_r1), 
                                                  `Replicate 2` = nrow(lps_r2), 
                                                  `Replicate 3` = nrow(lps_r3)))
            
@@ -378,13 +390,14 @@ addLegend(lps, where = "topleft", cex = .6)
 *Figure 5. t-SNE plots of the (concatenated) LOPIT datasets for each condition (Figure 4 of [1])*
 
 
-## Classification
+## Classification using a Bayesian framework 
 Proteins are assigned to one of the 11 subcellular marker classes using TAGM-MCMC [9]. TAGM-MCMC is a semi-supervised Bayesian generative classifier based on a T-Augmented Gaussian Mixture model that uses Bayesian computation performed using Markov-chain Monte Carlo. It is one of the many supervised machine learning methods available in the `pRoloc` package, but currently the only Bayesian method that is available in the package for the prediction of subcellular location for spatial proteomics data. 
 
 The advantage of using TAGM, and Bayesian methods in general, over classic supervised machine learning approaches is the ability for the algorithm to quantify the localisation uncertainty. The TAGM classifier models each annotated subcellular class using a Gaussian distribution and thus the full dataset can be modelled as a mixture of Gaussians. As described in [9] an outlier component probability is also included in this model which is mathematically described as a multivariate student’s t-distribution which gives extra information regarding the 
 
 Full details of the TAGM Bayesian methodology and mathematics are found in [9] and a detailed Bioconductor workflow for Bayesian analysis of spatial proteomoics data can be found in [10]. We follow this workflow for the analysis used here. 
 
+### Training
 Following Crook et al [10] we take the concatenated datasets for each conditions and run the TAGM-MCMC workflow. A collapsed Gibbs sampler was run in parallel for 9 chains to sample from the posterior distributions of localisation probabilites, with each chain run for 25,000 iterations and the Gelman-Rubin’s diagnostic was used to assess the convergence of the 9 Markov-Chains and the 3 best chains were kept and pooled for data processing for each condition.
 
 In the code chunk below we show how to run the `tagmMcmcTrain` function to generate the samples from the posterior distributions of each dataset (note: we do not run this dynamically as running is computationally intensive. We suggest you use a cluster or HPC if you have one available and scale according to the cores and `numChains` used)
@@ -438,6 +451,7 @@ mcmc_lps <- mcmc_lps_pooled
 mcmc_unst <- mcmc_unst_pooled
 ```
 
+### Prediction
 Finally, we use the `tagmMcmcPredict` function to obtain the full probability distribution over all proteins. 
 
 ```{r predict, eval=FALSE}
@@ -473,20 +487,166 @@ plot2D(tsne_lps, method = "none", methargs = list(unst),
        main = "TAGM-MCMC allocation\n 12h-LPS stimulated THP1-cells")
 addLegend(lps, where = "topleft", cex = .6)
 ```
+*Figure 6. t-SNE plots of the TAGM output on the (concatenated) LOPIT datasets for each condition*
 
 The results from the TAGM-MCMC method are appended to the `fData` of the `MSnSet` e.g. see `fData(thpLOPIT_unstimulated_mulvey2021)$tagm.mcmc.allocation` and `fvarLabels(thpLOPIT_unstimulated_mulvey2021)` to see all available slots.
 
-Relevent to this analysis we examine the following slots
+Relevent to this analysis we examine the following output slots
 - `tagm.mcmc.allocation`:  the TAGM-MCMC predictions for the most probable protein sub-cellular allocation.
 - `tagm.mcmc.probability`: the *mean* posterior probability for the protein sub-cellular allocations
 - `tagm.mcmc.outlier`: the posterior probability for the protein to belong to the outlier component.
 - `tagm.mcmc.probability.lowerquantile` and `tagm.mcmc.probability.upperquantile` are the lower and upper boundaries to the equi-tailed 95% credible interval of tagm.mcmc.probability.
 
 
+### Thresholding
+As with all supervised learning algorithms the classifier is only able to predict a location to one of the classes that are found in the training set. Our training set contained 11 subcellular niches, as described above. It is common practice in supervised machine learning to set a specific score cutoff/threshold on which to define new assignments/allocations, below which classifications are left unassigned/unknown if we do not expect all examples (proteins) to fall into one of the categories in the discrete training set. Indeed, we do not expect the whole subcellular diversity to be represented by the 11 niches used here, we expect there to be many more, many of which will be multiply localised within the cell. It is important to allow for the possibility of proteins to fall reside in multiple locations (see [6, 9, 10] for more details).
+
+One advantage of using a Bayesian framework is the outputs of the classifier are probabilities. This not only allows us to look at the distribution of probabilities over all subcellular classes but also allows us to extract a probability score threshold from the product of the posterior and outlier probabilities, on which we can define new assignments, we call this our localisation probability. 
+
+          localisation probability = posterior probability * outlier probability  
+
+The localisation probability is calculated for all proteins in each dataset and appended to the `fData` slot of each dataset.
+
+```{r calclocprob}
+fData(unst)$localisation.prob <- fData(unst)$tagm.mcmc.probability * (1 - fData(unst)$tagm.mcmc.outlier)
+fData(lps)$localisation.prob <- fData(lps)$tagm.mcmc.probability * (1 - fData(lps)$tagm.mcmc.outlier)
+```
+
+As described in the methods of [1] and as demonstrated in the code chunk below, we take a conservative approach, only assign proteins to a subcellular niche if the posterior probability was greater than 0.99 and if the outlier probability was very small < 1e-6, else proteins were left unassigned and labelled as proteins of “unknown location” in the data. 
+
+Our assignment threshold which we apply to the localisation probability is therefore 0.99 * 1e-6 = 0.99. We use the `getPredictions` function on the calculated `localisation.prob` to extract these newly assigned proteins.
+
+```{r extractlocs}
+## localisation probability = posterior probability * outlier probability
+fData(unst)$localisation.prob <- fData(unst)$tagm.mcmc.probability * (1 - fData(unst)$tagm.mcmc.outlier)
+fData(lps)$localisation.prob <- fData(lps)$tagm.mcmc.probability * (1 - fData(lps)$tagm.mcmc.outlier)
+
+## Threshold = (posterior > 0.99) * 1 - (outlier < 1e-6)
+t_loc <- 0.99 * (1 - 1e-6)
+unst <- getPredictions(unst, 
+                       fcol = "tagm.mcmc.allocation", 
+                       scol = "localisation.prob", 
+                       t = t_loc)
+lps <- getPredictions(lps, 
+                      fcol = "tagm.mcmc.allocation", 
+                      scol = "localisation.prob", 
+                      t = t_loc)
+```
+
+We can visualise these assignments on a t-SNE plot and also plot the quantitation profiles for each subcellular class.
+
+```{r plotres, fig.width=10, fig.height=5}
+par(mfrow = c(1,2))
+plot2D(tsne_unst, method = "none", methargs = list(unst), 
+       fcol = "tagm.mcmc.allocation.pred", 
+       main = "TAGM-MCMC final assignment\n unstimulated THP1-cells")
+plot2D(tsne_lps, method = "none", methargs = list(unst), 
+       fcol = "tagm.mcmc.allocation.pred", 
+       main = "TAGM-MCMC final assignment\n 12h-LPS stimulated THP1-cells")
+addLegend(lps, where = "topleft", cex = .6)
+```
+*Figure 7. t-SNE plots showing the final subcellular assignments of the (concatenated) LOPIT datasets for each condition (Figure 4 of [1])*
+
+```{r plotdist, fig.width=10, fig.height=16, eval=FALSE}
+## Unstimulated protein profiles
+par(mfrow = c(4,3))
+cl <- getMarkerClasses(unst)
+for (i in seq(cl)) {
+  par(mar = c(8,4,8,2), las = 2)
+  plotDist(unst[ fData(unst)$markers == getMarkerClasses(unst)[i], ], 
+           pcol = paste0(getStockcol()[i], 90), xlab = "", ylim = c(0, .9))
+  title(main = cl[i])
+
+}
+```
+<center>**Class-specific protein profiles for proteins classified in the unstimulated THP1-cell experiments**</center>
+```{r plotdist_run, fig.width=10, fig.height=16, echo=FALSE}
+## Unstimulated protein profiles
+par(mfrow = c(4,3))
+cl <- getMarkerClasses(unst)
+for (i in seq(cl)) {
+  par(mar = c(8,4,9,2), las = 2)
+  plotDist(unst[ fData(unst)$markers == getMarkerClasses(unst)[i], ], 
+           pcol = paste0(getStockcol()[i], 90), xlab = "", ylim = c(0, .9))
+  title(main = cl[i])
+
+}
+```
+*Figure 8. Protein quantitation profiles for proteins in the unstimulated experiments grouped by subcellular localisation*
+```{r plotdist2, fig.width=10, fig.height=16, eval=FALSE}
+## LPS protein profiles
+par(mfrow = c(4,3))
+cl <- getMarkerClasses(lps)
+for (i in seq(cl)) {
+  par(mar = c(8,4,8,2), las = 2)
+  plotDist(lps[ fData(lps)$markers == getMarkerClasses(lps)[i], ], 
+           pcol = paste0(getStockcol()[i], 90), xlab = "", ylim = c(0, .9))
+  title(main = cl[i])
+}
+```
+<center>**Class-specific protein profiles for proteins classified in the 12h-LPS stimulated THP1-cell experiments**</center>
+```{r plotdist2_run, fig.width=10, fig.height=16, echo=FALSE}
+## LPS protein profiles
+par(mfrow = c(4,3))
+cl <- getMarkerClasses(lps)
+for (i in seq(cl)) {
+  par(mar = c(8,4,8,2), las = 2)
+  plotDist(lps[ fData(lps)$markers == getMarkerClasses(lps)[i], ], 
+           pcol = paste0(getStockcol()[i], 90), xlab = "", ylim = c(0, .9))
+  title(main = cl[i])
+}
+```
+*Figure 9. Protein quantitation profiles for proteins in the 12h-LPS stimulated experiments grouped by subcellular localisation*
+
+The heatmap below shows the sub-cellular distribution of proteins between the two different conditions.
+
+```{r overlapAssignments}
+## Add a label to the LPS dataset so when we combine it  
+## with the unstimulated the information is not lost
+.lps <- lps
+.lps <- updateFvarLabels(.lps, "LPS")
+cmb <- MSnbase::combine(unst, .lps)  # now combine all results
+
+df_all <- compareDatasets(cmb, 
+                          fcol1 = "localisation.pred",
+                          fcol2 = "localisation.pred.LPS")
+ggheatmap(df_all, title = "TAGM locations between conditions")
+```
 
 ## Translocations
+One of the main aims of the THP-1 study in [1] was to use the hyperLOPIT technology to investigate the (spatial) changes in localisation i.e. the re-localisations, of proteins between different the unstimulated and 12h-LPS stimulated conditions. At this stage in the analysis we have two datasets on which to extract this information. In this section we look at how the location of proteins differ between conditions by examining their location as output from the Bayesian classification analysis in the previous section. The table below summaries the locations of the 3288 proteins on which we focus our analysis as they are common across all experiments and replicates.
 
-# 3. Temporal proteomics analysis
+```{r tableOfLocs}
+kable(rbind("Unstimulated" = table(loc_unst), "LPS" = table(loc_lps)))
+```
+
+For each protein the predicted localisation was examined in the unstimulated and the LPS-stimulated dataset and re-localisations were mapped and classified into one of four different translocation events: 
+
+1. from one organelle class in the unstimulated condition to a different organelle class in the LPS-stimulated dataset i.e. organelle to organelle, 
+2. from an unknown localisation in the unstimulated dataset to a predicted organelle class in the LPS-stimulated dataset i.e. unknown to organelle, 
+3. from a predicted localisation in the unstimulated dataset to an unknown location in the LPS-stimulated dataset i.e. organelle to unknown, and finally 
+4. a translocation event within the unknown class i.e. a protein that exhibits a large change between posterior probabilities in both conditions and is classified to an unknown location.
+
+
+In scenarios 2-4 where proteins were labelled as unknown, translocations were only extracted for proteins that strictly were deemed members of the outlier component and also exhibited a high posterior probability (>0.999). For every protein the natural L2 distance was calculated between the TAGM joint posterior probabilities providing an extra source of information which were used to filter the above 4 translocation events.
+
+
+In the below analysis we first consider 3 scenarios:
+
+(1) organelle to organelles
+- Require high posterior probability and low outlier probability for both unstimulated and LPS.
+  
+(2) unknown to organelle
+- Require unstimulated to have a high outlier probability
+- Require LPS to have high posterior and low outlier probability
+
+(3) organelle to unknown
+- Require unstimulated to have high posterior and low outlier probability
+- Require LPS to have a high outlier probability
+
+
+
+# Temporal proteomics analysis
 
 # References
 [1] Mulvey, C.M., Breckels, L.M., et al.
