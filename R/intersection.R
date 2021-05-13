@@ -1,5 +1,8 @@
 ## code for calculating overlap and generating heatmaps
 ## to display overlap (code written by L Breckels 19/09/18)
+library("reshape2")
+library("dplyr")
+library("ggplot2")
 
 ## combine datasets and get data.frame of assignments
 compareDatasets <- function(MSnSet, 

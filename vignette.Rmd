@@ -60,8 +60,8 @@ BiocManager::install("devtools")
 
 ## we also use the knitr and VennDiagram, ggplot2 packages in this 
 ## vignette so please  install if you do not have them 
-BiocManager::install(c("knitr", "VennDiagram", "ggplot2", "dplyr", "kableExtra", "coda", "reshape2"))
-source("R/intersection.R")
+BiocManager::install(c("knitr", "VennDiagram", "ggplot2", "dplyr", "kableExtra", 
+                       "coda", "reshape2", "circlize"))
 ```
 
 Note: We can install the `pRolocdata` package from Bioconductor using the same method e.g. `BiocManager::install("pRolocdata")`  however we require version >=1.29.1 which is not yet available on Bioconductor until the next stable release ([Thursday 20th May](http://www.bioconductor.org/developers/release-schedule/)). In the meantime we can access it via Github using the R package `devtools` using the below commands.
@@ -364,10 +364,11 @@ We use t-Distributed Stochastic Neighbor Embedding (t-SNE) to project our 60 dim
 
 In the below code chunk we plot the data and highlight the subcellular markers on each dataset (Figure 4 of [1]). Each point represents one protein. Markers are highlighted by different colours as denoted by the key and proteins for the subcellular location is unknown or undefined are grey.
 
-```{r plotit, fig.width=10, fig.height=5}
+```{r plotit, fig.width=10, fig.height=5, warning=FALSE, message=FALSE}
+source("r/prettymap.R")
 ## set organelle colours
 mycol <- c("#88CCEE", "#332288", "#53CAB7", "#0170b4", "#204f20", "#990000",
-           "#E69F00", "#DDCC77", "#E18493", "#AA4499", "#D55E00",  "#7E7E30")
+           "#E69F00", "#DDCC77", "#E18493", "#AA4499", "#D55E00")
 setStockcol(mycol)
 setUnknownpch(16)
 
@@ -381,11 +382,20 @@ tsne_lps <- plot2D(lps, method = "t-SNE", plot = FALSE)
 
 ## plot the data as t-SNE maps
 par(mfrow = c(1, 2))        
-plot2D(tsne_unst, method = "none", methargs = list(unst), 
-       fcol = "markers", main = "Subcellular markers\nunstimulated THP1-cells")
-plot2D(tsne_lps, method = "none", methargs = list(lps),  
-       fcol = "markers", main = "Subcellular markers12h-LPS stimulated THP1-cells")
-addLegend(lps, where = "topleft", cex = .6)
+oo = c(1:3, 10, 5, 4, 6:7, 9, 8, 11)
+myleg <- c(getMarkerClasses(unst), "Unknown")
+
+prettyTSNE(tsne_unst, unst, fcol = "markers", 
+          main = "Subcellular markers\nunstimulated THP1-cells",
+          orgOrder = oo, mainCol = mycol, oulineCol = darken(mycol))
+prettyTSNE(tsne_lps, lps, 
+          main = "Subcellular markers\n12h-LPS stimulated THP1-cells",
+          orgOrder = oo, mainCol = mycol, oulineCol = darken(mycol))
+
+## add a legend
+plot(NULL, xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1)
+legend("topleft", legend = myleg, col = mycol, bty = "n",
+       pch = 19, cex = 1.2, pt.cex = 1.6)
 ```
 *Figure 5. t-SNE plots of the (concatenated) LOPIT datasets for each condition (Figure 4 of [1])*
 
@@ -462,13 +472,16 @@ lps <- tagmMcmcPredict(lps, params = mcmc_lps_pooled, probJoint = TRUE)
 The TAGM results are appended to the `fData` slot of the datasets. As the above chunk is not run dynamically here we can load the results from the `pRolocdata` package (and they can also be found in Supplementary Table XXX of [1]). We load the datasets called `thpLOPIT_unstimulated_mulvey2021` and `thpLOPIT_lps_mulvey2021` which contain all machine learning results from [1]. As per the above the analysis this was conducted on proteins common in all experiments.
 
 ```{r seeresults, fig.width=10, fig.height=5}
-data("thpLOPIT_lps_mulvey2021")
+## Load the data from pRolocdata
 data("thpLOPIT_unstimulated_mulvey2021")
+data("thpLOPIT_lps_mulvey2021")
 
 ## We subset for proteins common in all experiments
-cmn <- intersect(featureNames(thpLOPIT_lps_mulvey2021), featureNames(thpLOPIT_unstimulated_mulvey2021))
+cmn <- intersect(featureNames(thpLOPIT_unstimulated_mulvey2021),
+                 featureNames(thpLOPIT_lps_mulvey2021))
 unst <- thpLOPIT_unstimulated_mulvey2021[cmn, ]
 lps <- thpLOPIT_lps_mulvey2021[cmn, ]
+
 
 ## Generate the t-SNE coords 
 set.seed(399)
@@ -477,15 +490,21 @@ set.seed(399)
 tsne_lps <- plot2D(lps, method = "t-SNE", plot = FALSE)
 
 ## plot TAGM assignments
-par(mfrow = c(1, 2)) 
-mycol <- paste0(getStockcol(), 50)
-plot2D(tsne_unst, method = "none", methargs = list(unst), 
-       fcol = "tagm.mcmc.allocation", col = mycol,
-       main = "TAGM-MCMC allocation\n unstimulated THP1-cells")
-plot2D(tsne_lps, method = "none", methargs = list(unst), 
-       fcol = "tagm.mcmc.allocation", col = mycol,
-       main = "TAGM-MCMC allocation\n 12h-LPS stimulated THP1-cells")
-addLegend(lps, where = "topleft", cex = .6)
+par(mfrow = c(1, 2))
+mycol <- paste0(getStockcol())
+oo = c(1:3, 10, 5, 4, 6:7, 9, 8, 11)
+myleg <- c(getMarkerClasses(unst), "Unknown")
+
+prettyTSNE(tsne_unst, unst, fcol = "tagm.mcmc.allocation", 
+          main = "TAGM-MCMC allocation\nunstimulated THP1-cells",
+          orgOrder = oo, mainCol = mycol, oulineCol = darken(mycol))
+prettyTSNE(tsne_lps, lps, fcol = "tagm.mcmc.allocation",
+          main = "TAGM-MCMC allocation\n12h-LPS stimulated THP1-cells",
+          orgOrder = oo, mainCol = mycol, oulineCol = darken(mycol))
+
+plot(NULL, xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1)
+legend("topleft", legend = myleg, col = mycol, bty = "n",
+       pch = 19, cex = 1.2, pt.cex = 1.6)
 ```
 *Figure 6. t-SNE plots of the TAGM output on the (concatenated) LOPIT datasets for each condition*
 
@@ -536,61 +555,69 @@ lps <- getPredictions(lps,
 We can visualise these assignments on a t-SNE plot and also plot the quantitation profiles for each subcellular class.
 
 ```{r plotres, fig.width=10, fig.height=5}
-par(mfrow = c(1,2))
-plot2D(tsne_unst, method = "none", methargs = list(unst), 
-       fcol = "tagm.mcmc.allocation.pred", 
-       main = "TAGM-MCMC final assignment\n unstimulated THP1-cells")
-plot2D(tsne_lps, method = "none", methargs = list(unst), 
-       fcol = "tagm.mcmc.allocation.pred", 
-       main = "TAGM-MCMC final assignment\n 12h-LPS stimulated THP1-cells")
-addLegend(lps, where = "topleft", cex = .6)
+## plot TAGM assignments
+par(mfrow = c(1, 2))
+mycol <- paste0(getStockcol())
+oo = c(1:3, 10, 5, 4, 6:7, 9, 8, 11)
+myleg <- c(getMarkerClasses(unst), "Unknown")
+
+prettyTSNE(tsne_unst, unst, fcol = "tagm.mcmc.allocation.pred", 
+          main = "TAGM-MCMC final assignment\nunstimulated THP1-cells",
+          orgOrder = oo, mainCol = mycol, oulineCol = darken(mycol))
+prettyTSNE(tsne_lps, lps, fcol = "tagm.mcmc.allocation.pred",
+          main = "TAGM-MCMC final assignment\n12h-LPS stimulated THP1-cells",
+          orgOrder = oo, mainCol = mycol, oulineCol = darken(mycol))
+
+plot(NULL, xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1)
+legend("topleft", legend = myleg, col = mycol, bty = "n",
+       pch = 19, cex = 1.2, pt.cex = 1.6)
 ```
 *Figure 7. t-SNE plots showing the final subcellular assignments of the (concatenated) LOPIT datasets for each condition (Figure 4 of [1])*
 
+Not including the 783 marker proteins, after classification and thresholding we find 1717 and 1713 proteins to localise to one of the 11 subcellular niches in the data for the unstimulated and 12h-LPS stimulated datasets respectively.
+
 ```{r plotdist, fig.width=10, fig.height=16, eval=FALSE}
 ## Unstimulated protein profiles
-par(mfrow = c(4,3))
+par(mfrow = c(4, 3))
 cl <- getMarkerClasses(unst)
 for (i in seq(cl)) {
-  par(mar = c(8,4,8,2), las = 2)
+  par(mar = c(8, 4, 8, 2), las = 2)
   plotDist(unst[ fData(unst)$markers == getMarkerClasses(unst)[i], ], 
            pcol = paste0(getStockcol()[i], 90), xlab = "", ylim = c(0, .9))
   title(main = cl[i])
-
 }
 ```
-<center>**Class-specific protein profiles for proteins classified in the unstimulated THP1-cell experiments**</center>
+<center>**Class-specific protein (unstimulated THP1-cell experiments)**</center>
 ```{r plotdist_run, fig.width=10, fig.height=16, echo=FALSE}
 ## Unstimulated protein profiles
-par(mfrow = c(4,3))
+par(mfrow = c(4, 3))
 cl <- getMarkerClasses(unst)
 for (i in seq(cl)) {
-  par(mar = c(8,4,9,2), las = 2)
+  par(mar = c(8, 4, 9, 2), las = 2)
   plotDist(unst[ fData(unst)$markers == getMarkerClasses(unst)[i], ], 
            pcol = paste0(getStockcol()[i], 90), xlab = "", ylim = c(0, .9))
   title(main = cl[i])
-
 }
 ```
 *Figure 8. Protein quantitation profiles for proteins in the unstimulated experiments grouped by subcellular localisation*
 ```{r plotdist2, fig.width=10, fig.height=16, eval=FALSE}
 ## LPS protein profiles
-par(mfrow = c(4,3))
+par(mfrow = c(4, 3))
 cl <- getMarkerClasses(lps)
 for (i in seq(cl)) {
-  par(mar = c(8,4,8,2), las = 2)
+  par(mar = c(8, 4, 8, 2), las = 2)
   plotDist(lps[ fData(lps)$markers == getMarkerClasses(lps)[i], ], 
            pcol = paste0(getStockcol()[i], 90), xlab = "", ylim = c(0, .9))
   title(main = cl[i])
 }
 ```
-<center>**Class-specific protein profiles for proteins classified in the 12h-LPS stimulated THP1-cell experiments**</center>
+<center>**Class-specific protein profiles (12h-LPS stimulated THP1-cell experiments)**</center>
 ```{r plotdist2_run, fig.width=10, fig.height=16, echo=FALSE}
 ## LPS protein profiles
-par(mfrow = c(4,3))
+par(mfrow = c(4, 3))
 cl <- getMarkerClasses(lps)
 for (i in seq(cl)) {
-  par(mar = c(8,4,8,2), las = 2)
+  par(mar = c(8, 4, 8, 2), las = 2)
   plotDist(lps[ fData(lps)$markers == getMarkerClasses(lps)[i], ], 
            pcol = paste0(getStockcol()[i], 90), xlab = "", ylim = c(0, .9))
   title(main = cl[i])
@@ -598,9 +625,19 @@ for (i in seq(cl)) {
 ```
 *Figure 9. Protein quantitation profiles for proteins in the 12h-LPS stimulated experiments grouped by subcellular localisation*
 
-The heatmap below shows the sub-cellular distribution of proteins between the two different conditions.
+### Overlap in protein locations
+The code chunk below shows a summary of of the protein residency in each condition for the 3288 proteins common in all experiments.
 
-```{r overlapAssignments}
+```{r tableOfLocs}
+loc_unst <- getMarkers(unst, "tagm.mcmc.allocation.pred")
+loc_lps <- getMarkers(lps, "tagm.mcmc.allocation.pred")
+kable(rbind("Unstimulated" = table(loc_unst), "LPS" = table(loc_lps)))
+```
+
+The heatmap below shows the sub-cellular distribution of proteins between the two conditions. We find within the 3288 proteins common in all experiments a total of 783 organelle marker proteins representing 11 subcellular niches (Figure 4A, Supplementary Table 7). Using TAGM a additional 1,717 proteins in the unstimulated dataset and 1,713 proteins in the LPS dataset were classified to distinct subcellular regions with high confidence (Figure 4B). The remaining proteins that did not meet the classifier threshold were left unassigned and labelled as “unknown”. As already mentioned above we do not expect all proteins to localise to one main discrete location, many proteins are known to "moonlight" and live in mixed locations. There was however a high degree of correlation between unstimulated and stimulated datasets, with 75% of the identified proteome sharing the same organelle localisation in both conditions.
+
+```{r overlapAssignments, fig.width=14, fig.height=10, warning=FALSE, message=FALSE}
+source("R/intersection.R")
 ## Add a label to the LPS dataset so when we combine it  
 ## with the unstimulated the information is not lost
 .lps <- lps
@@ -612,39 +649,132 @@ df_all <- compareDatasets(cmb,
                           fcol2 = "localisation.pred.LPS")
 ggheatmap(df_all, title = "TAGM locations between conditions")
 ```
+*Figure 10. Heatmap showing the distribution and overlap in organelle assignments between the TAGM classifications in the unstimulated data and classifications in the LPS-stimulated data (Figure S1,G of [1])*
 
 ## Translocations
-One of the main aims of the THP-1 study in [1] was to use the hyperLOPIT technology to investigate the (spatial) changes in localisation i.e. the re-localisations, of proteins between different the unstimulated and 12h-LPS stimulated conditions. At this stage in the analysis we have two datasets on which to extract this information. In this section we look at how the location of proteins differ between conditions by examining their location as output from the Bayesian classification analysis in the previous section. The table below summaries the locations of the 3288 proteins on which we focus our analysis as they are common across all experiments and replicates.
+One of the main aims of the THP-1 study in [1] was to use the hyperLOPIT technology to investigate the (spatial) changes in protein localisation between the unstimulated and 12h-LPS stimulated conditions. In this section we look at how the location of proteins differ between conditions by examining their classifications from TAGM.
 
-```{r tableOfLocs}
-kable(rbind("Unstimulated" = table(loc_unst), "LPS" = table(loc_lps)))
+Re-localisations i.e. proteins that do not localise to the same subcellular niche in both conditions, were extracted and labelled as one of four different translocation events: 
+
+1. Type 1: organelle-to-organelle - cases where proteins are assigned to different subcellular classes in each condition i.e. those that move from one discrete location to another.
+2. Type 2: unknown-to-organelle - cases where proteins in the unstimulated data are labelled as "unknown" but are localised to one of the 11 organelle classes in the 12h-LPS stimulated data.
+3. Type 3: organelle-to-unknown - cases where proteins in the 12h-LPS data are labelled as "unknown" but are localised to one of the 11 organelle classes in the unstimulated data.
+4. Type 4: unknown-to-unknown - proteins that have a difference in their joint probability distribution equal to 1 (as calculated by the natural L2 distance between their joint posterior probabilities in each condition, also known as the Euclidean norm).
+
+The L2 distance is denoted by
+$$
+d_{_{L2}norm}(x, y) = \sqrt {\sum_{i = 1}^{n}{(x_i - y_i)^2}}
+$$
+where *x* and *y* are the posterior probabilities for for the unstimulated and 12h-LPS stimulated respectively, for each *i*th class.
+
+As already mentioned, proteins labelled as "unknown" location, describe proteins that did not meet the classifier threshold to be assigned to one of the 11 discrete organelle categories that were included in our marker set. We not only wish to examine proteins that move between discrete locations (which we call type 1 translocations above) but we also wish to examine cases where in one condition the protein has been given a discrete location, and in another condition it has been described as "unknown", and therefore not belonging to one of the 11 subcellular classes. These cases are still of great interest as although we may not know where the protein has gone, what we do know is it is not localisaed to one the 11 classes. This could imply a number of scenarios including for example, the possibility of the protein having a mixed population and moonlighting between organelles, or it be that the protein localised to a subcellular niche that does not appear in our training data. Whichever reason what we are interested in is not only the change in localtion but the size of the probability change as this implies a change in localisation regardless of organelle residency. 
+
+As an extra measure of stringency we enforce that in cases 2-4 any protein considered as "unknown" must also have a high outlier probability (as per the below code chunk `out = 1e-3`). 
+
+For every protein the natural L2 distance (Euclidean norm) was calculated between the TAGM joint posterior probabilities and translocation events were further filtered and ranked based on this distance to give a succinct subset of translocations for further analysis.
+
+In the below code chunk we call the function `getTranslocations` which extracts the localisations of every protein in each condition then assigns a translocation type as described above and then calculates the L2 distance between the posterior probability distributions. This information is appended to the `fData` slot of our `MSnSet` along with all the other machine learning results.
+
+```{r getmovers}
+source("R/getmovers.R")
+extract_movers <- getTranslocations(unst, lps, 
+                                    fcol = "tagm.mcmc.allocation.pred", 
+                                    out = 1e-3)
+unst <- extract_movers[[1]]
+lps <- extract_movers[[2]]
+
+getMarkers(unst, "translocations")
 ```
 
-For each protein the predicted localisation was examined in the unstimulated and the LPS-stimulated dataset and re-localisations were mapped and classified into one of four different translocation events: 
+We can further examine and plot these translocations using alluvial and circos plots.
 
-1. from one organelle class in the unstimulated condition to a different organelle class in the LPS-stimulated dataset i.e. organelle to organelle, 
-2. from an unknown localisation in the unstimulated dataset to a predicted organelle class in the LPS-stimulated dataset i.e. unknown to organelle, 
-3. from a predicted localisation in the unstimulated dataset to an unknown location in the LPS-stimulated dataset i.e. organelle to unknown, and finally 
-4. a translocation event within the unknown class i.e. a protein that exhibits a large change between posterior probabilities in both conditions and is classified to an unknown location.
+```{r circosplot, message=FALSE, warning=FALSE, eval=FALSE}
+source("R/circos.R")
 
+## generate my colour scheme
+circos_cols <- c(getStockcol(), "grey")
+orgs <- c(union(getMarkerClasses(unst), getMarkerClasses(lps)), "unknown")
+(colscheme <- setNames(circos_cols, orgs))  # check levels consistent 
 
-In scenarios 2-4 where proteins were labelled as unknown, translocations were only extracted for proteins that strictly were deemed members of the outlier component and also exhibited a high posterior probability (>0.999). For every protein the natural L2 distance was calculated between the TAGM joint posterior probabilities providing an extra source of information which were used to filter the above 4 translocation events.
+## get indices of translocating proteins
+tl <- !is.na(fData(unst)$translocations)
 
+## set circos plot parameters
+par(mar = c(2, 2, 2, 2), cex = .5)
+circos.clear()
+circos.par(gap.degree = 4)
 
-In the below analysis we first consider 3 scenarios:
+## plot circos
+customChord(unst[tl], lps[tl, ], 
+            cols = colscheme,  
+            diffHeight  = -0.02, 
+            transparency = 0.3, 
+            link.sort = FALSE,
+            labels = TRUE)
+```
+*Note: labels were optimised in Inkscape and `customChord` was called with `labels = FALSE`*
+![*Figure 11. Directional circos plot showing protein translocations (Fig. S4A of [1])*](figures/circos.png){width=50%}
 
-(1) organelle to organelles
-- Require high posterior probability and low outlier probability for both unstimulated and LPS.
-  
-(2) unknown to organelle
-- Require unstimulated to have a high outlier probability
-- Require LPS to have high posterior and low outlier probability
+The t-SNE maps below also show the localisation of translocating proteins.
+```{r mapTL, fig.width=14, fig.height=7, warning=FALSE, message=FALSE}
+source("r/foi.R")
+par(mfrow = c(1, 2))
 
-(3) organelle to unknown
-- Require unstimulated to have high posterior and low outlier probability
-- Require LPS to have a high outlier probability
+## Unstimulated
+prettyTSNE_overlay(tsne_unst, unst, 
+                   fcol = "localisation.pred", 
+                   main = "", orgOrder =  oo, 
+                   mainCol = paste0(lighten(mycol), 30),
+                   oulineCol = paste0(lighten(mycol), 30))
+highlightOnPlot(object = tsne_unst, pch = 21, cex = 1.7,
+                col = mycol[2],  bg = lighten(lighten("grey")),
+                foi = type1, lwd = 2,
+                args = list(unst))
+highlightOnPlot(object = tsne_unst, pch = 24, cex = 1.7,
+                col = darken(mycol[7]), bg = lighten(lighten("#f4f4c8")), 
+                foi = type2, lwd = 2, 
+                args = list(unst))
+highlightOnPlot(object = tsne_unst, pch = 21, cex = 1.7,
+                col = darken("purple"), bg = lighten(lighten("#f2a6e3")), 
+                foi = type3, lwd = 2,
+                args = list(unst))
+highlightOnPlot(object = tsne_unst, pch = 24, cex = 1.7,
+                col = "#1c1c78", bg = lighten(lighten("#5fa8cc")), 
+                foi = type4, lwd = 2,
+                args = list(unst))
 
-
+prettyTSNE_overlay(tsne_lps, lps, fcol = "localisation.pred", 
+                   main = "", orgOrder =  oo,
+                   mainCol = paste0(lighten(mycol), 30), 
+                   oulineCol = paste0(lighten(mycol), 30))
+## 12h-LPS 
+highlightOnPlot(object = tsne_lps, pch = 21, cex = 1.7,
+                col = mycol[2],  bg = lighten(lighten("grey")),
+                foi = type1, lwd = 2,
+                args = list(lps))
+highlightOnPlot(object = tsne_lps, pch = 24, cex = 1.7,
+                col = darken(mycol[7]), bg = lighten(lighten("#f4f4c8")), 
+                foi = type2, lwd = 2, 
+                args = list(lps))
+highlightOnPlot(object = tsne_lps, pch = 21, cex = 1.7,
+                col = darken("purple"), bg = lighten(lighten("#f2a6e3")), 
+                foi = type3, lwd = 2,
+                args = list(lps))
+highlightOnPlot(object = tsne_lps, pch = 24, cex = 1.7,
+                col = "#1c1c78", bg = lighten(lighten("#5fa8cc")), 
+                foi = type4, lwd = 2,
+                args = list(lps))
+plot(NULL, xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1)
+legend("topleft", legend = c("Type 1: organelle-to-organelle", 
+                             "Type 2: unknown-to-organelle", 
+                             "Type 3: organelle-to-unknown", 
+                             "Type 4: unknown-to-unknown"), 
+       col = c(mycol[2], darken(mycol[7]), darken("purple"), "#1c1c78"), 
+       pt.bg = c(lighten(lighten("grey")), lighten(lighten("#f4f4c8")), 
+                 lighten(lighten("#f2a6e3")), lighten(lighten("#5fa8cc"))),
+       bty = "n",
+       pch = c(21, 24, 21, 24), pt.cex = 2.2, cex = 1.4)
+```
 
 # Temporal proteomics analysis
 
