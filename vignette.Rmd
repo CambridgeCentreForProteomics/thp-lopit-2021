@@ -634,7 +634,7 @@ loc_lps <- getMarkers(lps, "tagm.mcmc.allocation.pred")
 kable(rbind("Unstimulated" = table(loc_unst), "LPS" = table(loc_lps)))
 ```
 
-The heatmap below shows the sub-cellular distribution of proteins between the two conditions. We find within the 3288 proteins common in all experiments a total of 783 organelle marker proteins representing 11 subcellular niches (Figure 4A, Supplementary Table 7). Using TAGM a additional 1,717 proteins in the unstimulated dataset and 1,713 proteins in the LPS dataset were classified to distinct subcellular regions with high confidence (Figure 4B). The remaining proteins that did not meet the classifier threshold were left unassigned and labelled as “unknown”. As already mentioned above we do not expect all proteins to localise to one main discrete location, many proteins are known to "moonlight" and live in mixed locations. There was however a high degree of correlation between unstimulated and stimulated datasets, with 75% of the identified proteome sharing the same organelle localisation in both conditions.
+The heatmap below shows the sub-cellular distribution of proteins between the two conditions including the 783 annotated marker proteins (Figure 4A, Supplementary Table 7). Using TAGM a additional 1,717 proteins in the unstimulated dataset and 1,713 proteins in the LPS dataset were classified to distinct subcellular regions with high confidence (Figure 4B). The remaining proteins that did not meet the classifier threshold were left unassigned and labelled as “unknown”. As already mentioned above we do not expect all proteins to localise to one main discrete location, many proteins are known to "moonlight" and live in mixed locations. There was however a high degree of correlation between unstimulated and stimulated datasets, with 75% of the identified proteome sharing the same organelle localisation in both conditions.
 
 ```{r overlapAssignments, fig.width=14, fig.height=10, warning=FALSE, message=FALSE}
 source("R/intersection.R")
@@ -654,12 +654,12 @@ ggheatmap(df_all, title = "TAGM locations between conditions")
 ## Translocations
 One of the main aims of the THP-1 study in [1] was to use the hyperLOPIT technology to investigate the (spatial) changes in protein localisation between the unstimulated and 12h-LPS stimulated conditions. In this section we look at how the location of proteins differ between conditions by examining their classifications from TAGM.
 
-Re-localisations i.e. proteins that do not localise to the same subcellular niche in both conditions, were extracted and labelled as one of four different translocation events: 
+Re-localisations i.e. proteins that do not localise to the same subcellular niche in both conditions, were extracted and categorised as one of four different translocation events: 
 
 1. Type 1: organelle-to-organelle - cases where proteins are assigned to different subcellular classes in each condition i.e. those that move from one discrete location to another.
 2. Type 2: unknown-to-organelle - cases where proteins in the unstimulated data are labelled as "unknown" but are localised to one of the 11 organelle classes in the 12h-LPS stimulated data.
-3. Type 3: organelle-to-unknown - cases where proteins in the 12h-LPS data are labelled as "unknown" but are localised to one of the 11 organelle classes in the unstimulated data.
-4. Type 4: unknown-to-unknown - proteins that have a difference in their joint probability distribution equal to 1 (as calculated by the natural L2 distance between their joint posterior probabilities in each condition, also known as the Euclidean norm).
+3. Type 3: organelle-to-unknown - cases where proteins are assigned a localion to one of the 11 organelle classes in the unstimulated data but in the 12h-LPS data are labelled as "unknown".
+4. Type 4: unknown-to-unknown - dynamic proteins that were not assigned a subcellular niche. These are proteins which have a difference in their joint probability distribution equal to 1 (as calculated by the natural L2 distance, also known as the Euclidean norm).
 
 The L2 distance is denoted by
 $$
