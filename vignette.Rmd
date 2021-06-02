@@ -744,19 +744,7 @@ thp_alluvial + ggtitle("Translocations following 12h-LPS stimulation in THP-1 ce
 
 Alluvial (river) plot showing the 253 protein translocations (Fig. 4C of [1]) proteins which were found to move between organelles at 12h-LPS. The number of proteins that are found to translocate to and from each subcellular compartment is denoted next to the labelled alluvial blocks
 
-### Summary table of translocations between conditions
-```{r summaryofevents}
-df <- makedf(unst[tl, ], lps[tl, ],
-            fcol1 = "localisation.pred",
-            fcol2 = "localisation.pred",
-            mrkCol1 = "markers",
-            mrkCol2 = "markers")
-df <- df[!df$`Number of translocations`==0, ]
-names(df) <- c("Unstimulated", "LPS", "Number of translocations")
-kable(df)
-```
-
-## A scaffold for proteins of interest
+### Spatial map of translocating proteins
 The t-SNE maps below also show the visual localisation of translocating proteins.
 ```{r mapTL, fig.width=14, fig.height=7, warning=FALSE, message=FALSE, fig.show='hide'}
 source("r/foi.R")
@@ -820,7 +808,54 @@ legend("topleft", legend = c("Type 1: organelle-to-organelle",
 
 ![*Figure 13. T-SNE dimensionality reduction showing the 253 relocalising proteins from the hyperLOPIT experiments and plotted by Type 1,2,3, or 4 relocalisaton events, which are represented by grey circles, yellow triangles, pink circles and blue triangles, respectively.*](figures/fig13-tl1234.png){width=75%}
 
-##
+
+### Summary table of translocations between conditions
+```{r summaryofevents}
+df <- makedf(unst[tl, ], lps[tl, ],
+            fcol1 = "localisation.pred",
+            fcol2 = "localisation.pred",
+            mrkCol1 = "markers",
+            mrkCol2 = "markers")
+df <- df[!df$`Number of translocations`==0, ]
+names(df) <- c("Unstimulated", "LPS", "Number of translocations")
+kable(df)
+```
+
+## A scaffold for proteins of interest
+Mulvey et al (2021) show that hyperLOPIT provides a means to robustly classify unannotated proteins to distinct organelles and to investigate protein relocalisation events. The following spatial maps as generated in [1] highlight interesting findings from the THP-1 hyperLOPIT dataset.
+
+
+ADD MINI CIRCOS OR RIVER PLOTS FOR ALL OF THESE SPATIAL MAPS?
+
+### Relocalisa+on of RHO-GTPase trafficking molecules to the PM
+Fig 5
+
+### Examples of proteins that exhibit both spatial and temporal regulation
+Fig 6
+
+### Bayesian temporal clustering analysis
+Fig 7
+
+### Cytokine proteins 
+Supp Fig S1
+
+#### Cytosol translocations
+#### Nuclear translocations
+#### Lysosomal translocations
+Supp Fig S2
+
+#### Nucleo-cytoplasmic translocation events 
+#### Plasma membrane translocation events
+Supp Fig S3
+
+#### Trafficking proteins
+Supp Fig S4
+
+#### Secretome proteome (Meissner et al., 2013)
+#### Cell surface proteome (Kalxdorf et al., 2017)
+#### The RNA binding proteome (Liepelt et al., 2016)
+#### Mitochondrial and lysosomal proteome (Fu et al., 2020)
+Supp Fig S5
 
 # Temporal proteomics analysis
 
