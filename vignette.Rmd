@@ -688,10 +688,20 @@ lps <- extract_movers[[2]]
 getMarkers(unst, "translocations")
 ```
 
-We find 112 type1, 62 type 2, 49 type 3 and 30 type 4 translocation events. In the next section we can further examine and plot these events using alluvial and circos plots.
+In summary classed by translocation events we find -
+- 112 type 1
+- 62 type 2 
+- 49 type 3 
+- 30 type 4 
+proteins that move following 12 hour stimulation with LPS. 
+
+In the next section we can further examine and plot these events using alluvial and circos plots.
 
 
 ### Visualisation of translocations
+The following code chunks use functions from the `circlize` and `ggalluvial` packages (full source code in this repo and at the end of this vignette) to generate `circos` and `alluvial` plots respectively. These plots summarise the flow of proteins between organelle locations and the two conditions.
+
+#### Circos plot of protein translocations across organelles
 ```{r circosplot, message=FALSE, warning=FALSE, eval=TRUE, fig.show='hide'}
 source("R/circos.R")
 
@@ -717,8 +727,9 @@ customChord(unst[tl, ], lps[tl, ],
             labels = TRUE)
 ```
 *Note: labels were optimised in Inkscape*
-![*Figure 11. Directional circos plot showing protein translocations (Fig. S4A of [1])*](figures/circos.png){width=75%}
+![*Figure 11. Directional circos plot showing protein translocations (Fig. S4A of Mulvey et al 2021*](figures/circos.png){width=75%}
 
+#### Alluvial (river) plot of protein translocations across organelles
 ```{r alluvialplot, message=FALSE, warning=FALSE, eval=TRUE, fig.show='hide'}
 source("r/riverplot.R")
 library(ggalluvial)
@@ -728,21 +739,26 @@ thp_alluvial <- riverplot(unst[tl, ], lps[tl, ],
 thp_alluvial + ggtitle("Translocations following 12h-LPS stimulation in THP-1 cells") 
 ```
 *Note: labels were optimised in Inkscape*
-![*Figure 12. Alluvial (river) plot showing the 253 protein translocations (Fig. 4C of [1]) proteins which were found to move between organelles at 12h-LPS. The number of proteins that are found to translocate to and from each subcellular compartment is denoted next to the labelled alluvial blocks*](figures/river.png){width=75%}
 
+![*Figure 12. Alluvial (river) plot showing the 253 protein translocations (Fig. 4C of Mulvey et al. 2021 *](figures/river.png){width=75%}
+
+Alluvial (river) plot showing the 253 protein translocations (Fig. 4C of [1]) proteins which were found to move between organelles at 12h-LPS. The number of proteins that are found to translocate to and from each subcellular compartment is denoted next to the labelled alluvial blocks
+
+### Summary table of translocations between conditions
 ```{r summaryofevents}
 df <- makedf(unst[tl, ], lps[tl, ],
             fcol1 = "localisation.pred",
             fcol2 = "localisation.pred",
             mrkCol1 = "markers",
             mrkCol2 = "markers")
+df <- df[!df$`Number of translocations`==0, ]
 names(df) <- c("Unstimulated", "LPS", "Number of translocations")
 kable(df)
 ```
 
-
-The t-SNE maps below also show the localisation of translocating proteins.
-```{r mapTL, fig.width=14, fig.height=7, warning=FALSE, message=FALSE}
+## A scaffold for proteins of interest
+The t-SNE maps below also show the visual localisation of translocating proteins.
+```{r mapTL, fig.width=14, fig.height=7, warning=FALSE, message=FALSE, fig.show='hide'}
 source("r/foi.R")
 par(mfrow = c(1, 2))
 
@@ -801,6 +817,10 @@ legend("topleft", legend = c("Type 1: organelle-to-organelle",
        bty = "n",
        pch = c(21, 24, 21, 24), pt.cex = 2.2, cex = 1.4)
 ```
+
+![*Figure 13. T-SNE dimensionality reduction showing the 253 relocalising proteins from the hyperLOPIT experiments and plotted by Type 1,2,3, or 4 relocalisaton events, which are represented by grey circles, yellow triangles, pink circles and blue triangles, respectively.*](figures/fig13-tl1234.png){width=75%}
+
+##
 
 # Temporal proteomics analysis
 
