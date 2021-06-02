@@ -61,7 +61,7 @@ BiocManager::install("devtools")
 ## we also use the knitr and VennDiagram, ggplot2 packages in this 
 ## vignette so please  install if you do not have them 
 BiocManager::install(c("knitr", "VennDiagram", "ggplot2", "dplyr", "kableExtra", 
-                       "coda", "reshape2", "circlize"))
+                       "coda", "reshape2", "circlize", "ggalluvial"))
 ```
 
 Note: We can install the `pRolocdata` package from Bioconductor using the same method e.g. `BiocManager::install("pRolocdata")`  however we require version >=1.29.1 which is not yet available on Bioconductor until the next stable release ([Thursday 20th May](http://www.bioconductor.org/developers/release-schedule/)). In the meantime we can access it via Github using the R package `devtools` using the below commands.
@@ -471,7 +471,7 @@ lps <- tagmMcmcPredict(lps, params = mcmc_lps_pooled, probJoint = TRUE)
 
 The TAGM results are appended to the `fData` slot of the datasets. As the above chunk is not run dynamically here we can load the results from the `pRolocdata` package (and they can also be found in Supplementary Table XXX of [1]). We load the datasets called `thpLOPIT_unstimulated_mulvey2021` and `thpLOPIT_lps_mulvey2021` which contain all machine learning results from [1]. As per the above the analysis this was conducted on proteins common in all experiments.
 
-```{r seeresults, fig.width=10, fig.height=5}
+```{r seeresults, fig.width=10, fig.height=5, warning=FALSE, message=FALSE}
 ## Load the data from pRolocdata
 data("thpLOPIT_unstimulated_mulvey2021")
 data("thpLOPIT_lps_mulvey2021")
@@ -492,7 +492,7 @@ tsne_lps <- plot2D(lps, method = "t-SNE", plot = FALSE)
 ## plot TAGM assignments
 par(mfrow = c(1, 2))
 mycol <- paste0(getStockcol())
-oo = c(1:3, 10, 5, 4, 6:7, 9, 8, 11)
+oo <- c(1:3, 10, 5, 4, 6:7, 9, 8, 11)
 myleg <- c(getMarkerClasses(unst), "Unknown")
 
 prettyTSNE(tsne_unst, unst, fcol = "tagm.mcmc.allocation", 
@@ -652,13 +652,13 @@ ggheatmap(df_all, title = "TAGM locations between conditions")
 *Figure 10. Heatmap showing the distribution and overlap in organelle assignments between the TAGM classifications in the unstimulated data and classifications in the LPS-stimulated data (Figure S1,G of [1])*
 
 ## Translocations
-One of the main aims of the THP-1 study in [1] was to use the hyperLOPIT technology to investigate the (spatial) changes in protein localisation between the unstimulated and 12h-LPS stimulated conditions. In this section we look at how the location of proteins differ between conditions by examining their classifications from TAGM.
+One of the main aims of the THP-1 study in [1] was to use the hyperLOPIT technology to investigate the (spatial) changes in protein localisation between the unstimulated and 12h-LPS stimulated conditions. In this section we look at how the assigned location of proteins differ between the two conditions. We examine their assigned location from TAGM and also the difference between their joint posterior probability distributions.
 
 Re-localisations i.e. proteins that do not localise to the same subcellular niche in both conditions, were extracted and categorised as one of four different translocation events: 
 
 1. Type 1: organelle-to-organelle - cases where proteins are assigned to different subcellular classes in each condition i.e. those that move from one discrete location to another.
 2. Type 2: unknown-to-organelle - cases where proteins in the unstimulated data are labelled as "unknown" but are localised to one of the 11 organelle classes in the 12h-LPS stimulated data.
-3. Type 3: organelle-to-unknown - cases where proteins are assigned a localion to one of the 11 organelle classes in the unstimulated data but in the 12h-LPS data are labelled as "unknown".
+3. Type 3: organelle-to-unknown - cases where proteins are assigned a location to one of the 11 organelle classes in the unstimulated data but in the 12h-LPS data are labelled as "unknown".
 4. Type 4: unknown-to-unknown - dynamic proteins that were not assigned a subcellular niche. These are proteins which have a difference in their joint probability distribution equal to 1 (as calculated by the natural L2 distance, also known as the Euclidean norm).
 
 The L2 distance is denoted by
@@ -667,11 +667,13 @@ d_{_{L2}norm}(x, y) = \sqrt {\sum_{i = 1}^{n}{(x_i - y_i)^2}}
 $$
 where *x* and *y* are the posterior probabilities for for the unstimulated and 12h-LPS stimulated respectively, for each *i*th class.
 
-As already mentioned, proteins labelled as "unknown" location, describe proteins that did not meet the classifier threshold to be assigned to one of the 11 discrete organelle categories that were included in our marker set. We not only wish to examine proteins that move between discrete locations (which we call type 1 translocations above) but we also wish to examine cases where in one condition the protein has been given a discrete location, and in another condition it has been described as "unknown", and therefore not belonging to one of the 11 subcellular classes. These cases are still of great interest as although we may not know where the protein has gone, what we do know is it is not localisaed to one the 11 classes. This could imply a number of scenarios including for example, the possibility of the protein having a mixed population and moonlighting between organelles, or it be that the protein localised to a subcellular niche that does not appear in our training data. Whichever reason what we are interested in is not only the change in localtion but the size of the probability change as this implies a change in localisation regardless of organelle residency. 
+As already mentioned, proteins labelled as "unknown" location, describe proteins that did not meet the classifier threshold to be assigned to one of the 11 discrete organelle categories, as defined in our marker set. We not only wish to examine proteins that move between discrete locations (which we call type 1 translocations above) but we also wish to examine cases where in one condition the protein has been given a discrete location, and in another condition it has been described as "unknown", and therefore not belonging to one of the 11 subcellular classes. It is important to note that in terms of machine learning, the term "unknown" is not a class in the training set, it is simply as term we use in our pipeline to describe proteins that we can say as not confidently assigned to one of the 11 classes. 
 
-As an extra measure of stringency we enforce that in cases 2-4 any protein considered as "unknown" must also have a high outlier probability (as per the below code chunk `out = 1e-3`). 
+These cases are still of great interest as although we may not know where the protein exactly resides in this snapshot of time we do know it is not classed to the same location in the other condition. Unknown cases encompass a number of scenarios for example, a protein having a mixed population and moonlighting between organelles, or it be that the protein localised to a subcellular niche that does not appear in our training data. Whichever reason what we are interested in is not only a change in localion but the size of the probability change, as this implies a change in localisation regardless of organelle residency. 
 
-For every protein the natural L2 distance (Euclidean norm) was calculated between the TAGM joint posterior probabilities and translocation events were further filtered and ranked based on this distance to give a succinct subset of translocations for further analysis.
+As an extra measure of stringency we enforce that in cases 2-4 any protein considered as "unknown" must also have a high outlier probability (as per the below code chunk `out = 1e-3`) and thus is clearly not a member of any of the 11 classes.
+
+For every protein the natural L2 distance (Euclidean norm) was calculated between the TAGM joint posterior probability distributions and translocation events were further filtered and ranked based on this distance to give a succinct subset of translocations for further analysis and data mining.  
 
 In the below code chunk we call the function `getTranslocations` which extracts the localisations of every protein in each condition then assigns a translocation type as described above and then calculates the L2 distance between the posterior probability distributions. This information is appended to the `fData` slot of our `MSnSet` along with all the other machine learning results.
 
@@ -686,9 +688,11 @@ lps <- extract_movers[[2]]
 getMarkers(unst, "translocations")
 ```
 
-We can further examine and plot these translocations using alluvial and circos plots.
+We find 112 type1, 62 type 2, 49 type 3 and 30 type 4 translocation events. In the next section we can further examine and plot these events using alluvial and circos plots.
 
-```{r circosplot, message=FALSE, warning=FALSE, eval=FALSE}
+
+### Visualisation of translocations
+```{r circosplot, message=FALSE, warning=FALSE, eval=TRUE, fig.show='hide'}
 source("R/circos.R")
 
 ## generate my colour scheme
@@ -705,15 +709,37 @@ circos.clear()
 circos.par(gap.degree = 4)
 
 ## plot circos
-customChord(unst[tl], lps[tl, ], 
+customChord(unst[tl, ], lps[tl, ], 
             cols = colscheme,  
             diffHeight  = -0.02, 
             transparency = 0.3, 
             link.sort = FALSE,
             labels = TRUE)
 ```
-*Note: labels were optimised in Inkscape and `customChord` was called with `labels = FALSE`*
-![*Figure 11. Directional circos plot showing protein translocations (Fig. S4A of [1])*](figures/circos.png){width=50%}
+*Note: labels were optimised in Inkscape*
+![*Figure 11. Directional circos plot showing protein translocations (Fig. S4A of [1])*](figures/circos.png){width=75%}
+
+```{r alluvialplot, message=FALSE, warning=FALSE, eval=TRUE, fig.show='hide'}
+source("r/riverplot.R")
+library(ggalluvial)
+thp_alluvial <- riverplot(unst[tl, ], lps[tl, ], 
+                          cols = colscheme,
+                          labels = TRUE)
+thp_alluvial + ggtitle("Translocations following 12h-LPS stimulation in THP-1 cells") 
+```
+*Note: labels were optimised in Inkscape*
+![*Figure 12. Alluvial (river) plot showing the 253 protein translocations (Fig. 4C of [1]) proteins which were found to move between organelles at 12h-LPS. The number of proteins that are found to translocate to and from each subcellular compartment is denoted next to the labelled alluvial blocks*](figures/river.png){width=75%}
+
+```{r summaryofevents}
+df <- makedf(unst[tl, ], lps[tl, ],
+            fcol1 = "localisation.pred",
+            fcol2 = "localisation.pred",
+            mrkCol1 = "markers",
+            mrkCol2 = "markers")
+names(df) <- c("Unstimulated", "LPS", "Number of translocations")
+kable(df)
+```
+
 
 The t-SNE maps below also show the localisation of translocating proteins.
 ```{r mapTL, fig.width=14, fig.height=7, warning=FALSE, message=FALSE}
@@ -723,7 +749,7 @@ par(mfrow = c(1, 2))
 ## Unstimulated
 prettyTSNE_overlay(tsne_unst, unst, 
                    fcol = "localisation.pred", 
-                   main = "", orgOrder =  oo, 
+                   main = "Type 1, 2, 3, or 4 translocation events", orgOrder =  oo, 
                    mainCol = paste0(lighten(mycol), 30),
                    oulineCol = paste0(lighten(mycol), 30))
 highlightOnPlot(object = tsne_unst, pch = 21, cex = 1.7,
@@ -777,6 +803,8 @@ legend("topleft", legend = c("Type 1: organelle-to-organelle",
 ```
 
 # Temporal proteomics analysis
+
+# Source code 
 
 # References
 [1] Mulvey, C.M., Breckels, L.M., et al.
