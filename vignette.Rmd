@@ -61,7 +61,8 @@ BiocManager::install("devtools")
 ## we also use the knitr and VennDiagram, ggplot2 packages in this 
 ## vignette so please  install if you do not have them 
 BiocManager::install(c("knitr", "VennDiagram", "ggplot2", "dplyr", "kableExtra", 
-                       "coda", "reshape2", "circlize", "ggalluvial"))
+                       "coda", "reshape2", "circlize", "ggalluvial", "tidyr", 
+                       "Rmisc", "gridExtra", "gplots", "scico", "plotrix"))
 ```
 
 Note: We can install the `pRolocdata` package from Bioconductor using the same method e.g. `BiocManager::install("pRolocdata")`  however we require version >=1.29.1 which is not yet available on Bioconductor until the next stable release ([Thursday 20th May](http://www.bioconductor.org/developers/release-schedule/)). In the meantime we can access it via Github using the R package `devtools` using the below commands.
@@ -101,7 +102,576 @@ data("thpLOPIT_lps_mulvey2021")
 thpLOPIT_lps_mulvey2021
 ```
 
-In the next section we introduce the data, experimental design and brief overview of the experimental protocol before walking users through the downstream analysis.
+In the next sections we introduce the data, experimental design and brief overview of the experimental protocol before walking users through the downstream analysis which was used to generate the datasets available in `pRolocdata` and the manuscript Mulvey et al 2021 [1].
+
+# Temporal proteomics data analysis
+
+## Summary
+We assessed the global proteomic landscape of the THP-1 monocytic leukaemic cell line using a shotgun proteomics time course. Total (unfractionated) cell lysates were collected at 0, 2, 4, 6, 12, and 24 hour time-points following LPS stimulation and processed for quantitative, MS-based proteomics analysis. We reproducibly quantified 4,292 proteins across 3 biological replicate experiments, at all time-points. In total 311 proteins were found to be altered in abundance during the time course of LPS stimulation, with statistical significance (adjusted p-value < 0.01). The results are reported in full in Mulvey et al. 2021 [1].
+
+## PSM level data processing
+The 3 PSM level datasets were imported into R and missing values were carefully assessed. 
+
+We can load the PSM and protein level data from the `pRolocdata` package by using the data function.
+```{r psmdata_tc}
+## Unstimulated data
+data("psms_lpsTimecourse_rep1_mulvey2021")
+data("psms_lpsTimecourse_rep2_mulvey2021")
+data("psms_lpsTimecourse_rep3_mulvey2021")
+
+dim(psms_lpsTimecourse_rep1_mulvey2021)
+dim(psms_lpsTimecourse_rep2_mulvey2021)
+dim(psms_lpsTimecourse_rep3_mulvey2021)
+```
+
+34640, 49806 and 41853 PSMs were detected in replicates 1, 2 and 3, respectively.
+
+In the below code chunk we put the replicates into a `MSnSetList` for ease of data processing.
+```{r makealistofpsms}
+psms <- MSnSetList(list(psms_lpsTimecourse_rep1_mulvey2021,
+                        psms_lpsTimecourse_rep2_mulvey2021,
+                        psms_lpsTimecourse_rep3_mulvey2021))
+```
+
+### Missing values assessent
+In the below code chunks we can see that there are very few PSMs with missing values after filtering. There are 19 missing values in rep 1, 7 in rep2, and 16 in rep3. As we have such few missing values we start but by assessing if we have other PSMs for the PSMs corresponding protein group available for quantitation. The below code chunk counts the number of PSMs available 
+
+```{r countpsms_quant}
+## Display number of PSMs for each protein with a MV
+(numpsms <- sapply(seq(psms), function(y)
+  {sapply(fData(psms[[y]])$Master.Protein.Accessions[xx[[y]]],
+       function(z) length(which(fData(psms[[y]])$Master.Protein.Accessions 
+                                == z)))}))
+## Any singletons?
+head(sapply(numpsms, function(z) length(which(z == 1))))
+```
+
+We find that there is only one singelton PSM (aone protein group with one only PSM for quantitation). The below code chunk plots the PSM quantitation profiles of every protein group that has a missing PSM. Red triangles highlight the missing value. 
+
+```{r exmainpsmsplot, oma = c(10, 1, 1, 1))}
+## plot reps
+plotMV <- function(r) {
+  tochk <- unique(names(numpsms[[r]]))
+  for (i in 1:length(tochk)) {
+  mm <- exprs(psms[[r]])[which(fData(psms[[r]])$Master.Protein.Accessions == tochk[i]), , drop = FALSE]
+  matplot(t(mm), type = "l", xlab = "", ylab = "m/z", lwd = 2, 
+          main = tochk[i], col = "grey", axes = FALSE)
+  axis(2)
+  axis(1, at = 1:ncol(mm), labels = colnames(mm), las = 2)
+  if (any(is.na(mm))) {
+    ycoord <- sapply(1:ncol(mm), function(z) which(is.na(mm[, z])))
+  .l <- sapply(ycoord, length)
+  .xi <- which(.l > 0)
+  xcoord <- unlist(lapply(1:length(.xi), function(z) rep(.xi[z], .l[.xi[z]])))
+  ycoord <- unlist(ycoord)
+  points(x = xcoord, y = ycoord, bg = "red", col = "black", pch = 24, cex = 1.5)
+  }
+  }
+}
+
+par(mfrow = c(4, 4), oma = c(3, 1, 1, 1))
+plotMV(r = 1)
+
+par(mfrow = c(2, 4), oma = c(3, 1, 1, 1))
+plotMV(r = 2)
+
+par(mfrow = c(3, 4), oma = c(3, 1, 1, 1))
+plotMV(r = 3)
+```
+
+![](figures/shotgun_rep1_mv.png)
+![](figures/shotgun_rep2_mv.png)
+![*Figure X. PSM quantitation profile plots showing for each protein group that has a missing value in each replciate. The red triangles show the location of the missing values in the timecourse.*](figures/shotgun_rep3_mv.png)
+*Figure 2. Heatmaps showing missing value distributions per set and replicate*
+
+Looking at the above plots we see for the PSMs that are missing there are two general trends
+- they occur at the lower end/start of the time course
+- missing PSMs tend to appear at the beginning of the time-course and show the same trend over time (a few exceptions listed below)
+
+Given these two observations we decide for the majority of PSMs to use a left-censored imputation approach. It wouldn't be appropriate for a few cases and these are P06307, P04075 in rep 1, P113388-4, P12956 in rep 2 and so for these PSMs we will use k-NN, and thus take a mixed imputation strategy. We remove the PSM at row 31435 for the protein group P12956 as it has 5 missing values out of 6 and there are many other PSMs available for protein quantitation. Type `?impute` in your R console for more information on missing values imputation methods available in the `MSnbase` and `pRoloc` pipeline. 
+
+Imputation is done in R using the `impute` function in `MSnbase`
+
+```{r imputepsms}
+## Split the data by replicate
+psms_rep1 <- psms[[1]]
+psms_rep2 <- psms[[2]]
+psms_rep3 <- psms[[3]]
+
+## define psms which are missing at random - see ?impute
+fData(psms_rep1)$randna <- FALSE
+fData(psms_rep1)$randna[11237] <- TRUE      # P06307
+fData(psms_rep1)$randna[26194] <- TRUE      # P04075
+
+# remove missing this PSM for protein P12956 as it has 5 missing values out of the 6 timepoints
+# remove PSM 48162 for protein P113388-4 as 42 other PSMs available and it has no clear trend
+psms_rep2 <- psms_rep2[-c(31435, 48162), ]
+
+## replicate 1 imputation
+psms_rep1 <- impute(psms_rep1, "mixed", 
+                    randna = fData(psms_rep1)$randna, 
+                    mar = "knn",
+                    mnar = "MinDet")
+
+## replicate 2 imputation                
+psms_rep2 <- impute(psms_rep2, "MinDet")
+
+## replicate 3 imputation
+psms_rep3 <- impute(psms_rep3, "MinDet")
+
+## Re-create MSnSetList of the data
+psms <- MSnSetList(list(rep1 = psms_rep1, rep2 = psms_rep2, rep3 = psms_rep3))
+```
+
+We can check these look sensible by re-plotting them again.
+```{r replotchk}
+## Display number of PSMs for each protein with a MV
+numpsms <- sapply(seq(psms), function(y)
+  {sapply(fData(psms[[y]])$Master.Protein.Accessions[xx[[y]]],
+       function(z) length(which(fData(psms[[y]])$Master.Protein.Accessions 
+                                == z)))})
+
+par(mfrow = c(4, 4), oma = c(3, 1, 1, 1))
+plotMV(r = 1)
+
+par(mfrow = c(2, 4), oma = c(3, 1, 1, 1))
+plotMV(r = 2)
+
+par(mfrow = c(3, 4), oma = c(3, 1, 1, 1))
+plotMV(r = 3)
+```
+
+### Data normalisation
+
+The data was visually assessed by examining pairwise scatter plots and `MAplots` of the data and then normalised using `vsn` followed by `diff.median`.  
+
+```{r normalise}
+## make all PSMs uppercase so that PSMs with different PTMs are not
+## considered as different sequences
+for (i in seq(psms)) 
+  fData(psms@x[[i]])$Annotated.Sequence <- toupper(fData(psms@x[[i]])$Annotated.Sequence)
+
+
+## combine the data and normalise
+cmb <- MSnbase::combine(psms[[1]], psms[[2]])
+cmb <- MSnbase::combine(cmb, psms[[3]])
+dim(cmb)
+
+## Let's have a look at the intensities
+boxplot(log(exprs(cmb)))
+
+## Try a few different normalisation approaches
+cmb.vsn <- normalise(cmb, "vsn")
+cmb.median <- normalise(cmb, "diff.median")
+cmb.vsn.median <- normalise(cmb.vsn, "diff.median")
+cmb.quantiles <- normalise(cmb, "quantiles")
+
+## Plot the data
+par(mfrow = c(2, 3), las = 2, oma = c(6, 1, 1, 1))
+boxplot(log(exprs(cmb)), main = "method = untransformed", ylab = "log intensity")
+boxplot(log(exprs(cmb.median)), main = "method = diff.median", ylab = "log intensity")
+boxplot(exprs(cmb.vsn), main = "method = vsn", ylab = "log intensity")    # NOTE: VSN internally logs the data 
+boxplot(log(exprs(cmb.vsn.median)), main = "method = vsn + diff.median", ylab = "log intensity")
+boxplot(log(exprs(cmb.quantiles)), main = "method = quantiles", ylab = "log intensity")
+
+## We decide to go with 'vsn' followed by 'diff.median'
+cmb <- cmb.vsn.median
+```
+
+![*Figure X. Boxplots displaying the (log) intensities of PSMs after applying different normalisation methods available in MSnbase*](figures/psm_norm_shotgun.png)
+
+### Aggregation to protein
+
+We use the `combineFeatures` function from `MSnbase` to aggregate to protein level.
+
+```{r aggtoprot}
+psms1 <- filterNA(cmb[, 1:6])
+psms2 <- filterNA(cmb[, 7:12])
+psms3 <- filterNA(cmb[, 13:18])
+psms <- MSnSetList(list(psms1, psms2, psms3))
+
+## Aggregate to protein using median PSM per protein group
+prots <- lapply(seq(psms), function(z)
+               combineFeatures(psms[[z]], 
+                               groupBy = fData(psms[[z]])$Master.Protein.Accession,
+                               method = "median", verbose = FALSE))
+
+
+## Do data fusion - create concatenated complete dataset
+prots[[1]] <- updateFvarLabels(prots[[1]])
+prots[[2]] <- updateFvarLabels(prots[[2]])
+prots[[3]] <- updateFvarLabels(prots[[3]])
+cmbprots <- MSnbase::combine(prots[[1]], prots[[2]])
+cmbprots <- MSnbase::combine(cmbprots, prots[[3]])
+cmbprots <- MSnbase::filterNA(cmbprots)
+dim(cmbprots)
+```
+We identify 5221, 5812 and 5210 proteins in replicates 1, 2 and 3, respectively, and a total of 4292 common across all channels and timepoints in all samples.
+ 
+## Protein level data processing
+We load the individual protein level datasets from `pRolocdata` using the `data` function.
+
+```{r loadprotdata}
+data("lpsTimecourse_rep1_mulvey2021")
+data("lpsTimecourse_rep2_mulvey2021")
+data("lpsTimecourse_rep3_mulvey2021")
+dim(lpsTimecourse_rep1_mulvey2021)
+dim(lpsTimecourse_rep2_mulvey2021)
+dim(lpsTimecourse_rep3_mulvey2021)
+```
+
+We see we have 5221, 5812 and 5210 proteins for replicates 1, 2 and 3, respectively.
+
+### Data fusion
+Data is concatenated into one matrix using the `combine` function in `MSnbase`(the combined dataset is also available directly from `pRolocdata` type `data("lpsTimecourse_mulvey2021")`) and then proteins not common across all replicates are removed by using the `filterNA` function.
+
+```{r concatenate}
+cmb <- MSnbase::combine(lpsTimecourse_rep1_mulvey2021, 
+                        lpsTimecourse_rep2_mulvey2021)
+cmb <- MSnbase::combine(cmb, lpsTimecourse_rep3_mulvey2021)
+cmb <- filterNA(cmb)
+dim(cmb)
+```
+We find 4292 proteins common across all timepoints in all replicates.
+
+```{r addgn}
+## Add Gene Names to the data for adding Gene Name labels when we plot the results
+cmb <- addGeneName(cmb, fcol = "Protein.Descriptions.rep1", col.name = "GN")
+```
+
+## Looking for changes in abudance
+
+### Batch effects
+Before we can have a look at changes in protein expression we first need to check if we see any batch effects. We plot the data by Tag and Replicate to see if this may be the case.
+
+```{r checkbatch}
+par(mfrow = c(1, 2))
+plot2D(t(cmb), fcol = "Tag", main = "PCA: TMT tag")
+plot2D(t(cmb), fcol = "Replicate", main = "PCA: Replicates")
+```
+
+We see that the samples are confounded by replicate. We can correct for this by using `limma`. The `limma` package in Bioconductor provides a number of linear models that can accommodate complex experimental designs and account for experimental technicalities such as batch effects and confounding factors. To statistically analyse relative abundance we use `limma`'s empirical Bayes moderated t-test, a shrinkage method appropriate for small sample sizes (see Smyth's paper: [http://www.ncbi.nlm.nih.gov/pubmed/16646809](http://www.ncbi.nlm.nih.gov/pubmed/16646809)).
+
+A paired t-test is valid as experiments within each replicate use the same lysate.
+
+### Differential protein expression analysis with `limma` 
+We use the classic `eBayes` method following `lmfit` and add `Replicate` to the model matrix so we can account for this as one of the confounding factors `design <- model.matrix(~Replicate+Time)`. Limma takes care of these potential batch effects.
+
+In the next sections we perform differential expression analysis using the `limma` package [xxx].
+
+
+#### 24 hour timepoint
+```{r sourceVolcano}
+source("r/ggVolcano.R")
+```
+```{r dolimma_t24}
+## 0hr and 24hr
+i <- grep("X0.hr", sampleNames(cmb))
+j <- grep("X24.hr", sampleNames(cmb))
+eset <- cmb[, c(i, j)]
+data <- exprs(eset)
+rownames(data) <- fData(cmb)[["GN"]]
+head(data)
+
+## Create a model matrix
+Time <- as.factor(pData(eset)$Time)
+Replicate <- as.factor(pData(eset)$Replicate)
+(design <- model.matrix(~Replicate+Time))
+
+## Perform the fit
+fit <- lmFit(data, design)
+fit <- eBayes(fit)
+
+## Get the results
+res_t24 <- topTable(fit, coef = "Time24", 
+                 adjust.method="BH", number = Inf)
+res_t24 <- addPlottingInfo(res_t24)
+msnset_t24 <- addLimmaInfo(cmb, res_t24)
+
+## Look at p-value distribution
+hist(res_t24[, "P.Value"], breaks = 50, 
+     main = "Histogram of p-values for 0/24hr LPS \n(limma's paired moderated t-test)", 
+     xlab = "p-value")
+
+## save data as a TSV/CSV
+write.exprs(msnset_t24, fDataCols = 131:138,  sep = "\t", 
+            file = "csv/timecourse_t24.tsv")
+```
+
+It's always a good idea to check the distribution of your raw uncorrected p-values. The easiest way to do this is to make a histogram of your p-values as per the above code chunk. [This is a great post](http://varianceexplained.org/statistics/interpreting-pvalue-histogram/) on how to interpret your p-values. We find we have a nice anti-conservative distribution. 
+
+The object `res_24` is a `data.frame` containing the output from running `topTable` which is a function to extract a table of the top-ranked genes/proteins from the limma linear model fit. 
+
+We can now take this output and append it to our `MSnSet` and then plot the results. The classic way to present gene/protein expression data is a volcano plot.
+
+The `ggVolcano` function plots the results on a volcano plot. 
+
+```{r plotVolcano_t24}
+ggVolcano(res_t24, "24 hours", N = 20, lfc = 0.6, p = 0.01, addLegend = TRUE)
+ggVolcano(res_t24, "24 hours", N = 20, lfc = 0.6, p = 0.01, lfc_strong = 1, addLegend = TRUE)
+```
+#### 12 hour timepoint
+
+We repeat the analysis at each time point and look to see if we find any proteins that are significantly up- or downregulated.
+
+```{r dolimma_t12}
+## 0hr and 12hr
+i <- grep("X0.hr", sampleNames(cmb))
+j <- grep("X12.hr", sampleNames(cmb))
+eset <- cmb[, c(i, j)]
+data <- exprs(eset)
+rownames(data) <- fData(cmb)[["GN"]]
+head(data)
+
+## Create a model matrix
+Time <- as.factor(pData(eset)$Time)
+Replicate <- as.factor(pData(eset)$Replicate)
+design <- model.matrix(~Replicate+Time)
+
+## Perform the fit
+fit <- lmFit(data, design)
+fit <- eBayes(fit)
+
+## Get the results
+res_t12 <- topTable(fit, coef = "Time12", 
+                 adjust.method="BH", number = Inf)
+res_t12 <- addPlottingInfo(res_t12)
+msnset_t12 <- addLimmaInfo(cmb, res_t12)
+
+## Look at p-value distribution
+hist(res_t12[, "P.Value"], breaks = 50, 
+     main = "Histogram of p-values for 0/12hr LPS \n(limma's paired moderated t-test)", 
+     xlab = "p-value")
+
+## save data as a TSV/CSV
+write.exprs(msnset_t12, fDataCols = 131:138,  sep = "\t", 
+            file = "csv/timecourse_t12.tsv")
+
+## plot volcanos
+ggVolcano(res_t12, "12 hours", N = 20, lfc = 0.6, p = 0.01, addLegend = FALSE)
+ggVolcano(res_t12, "12 hours", N = 20, lfc = 0.6, p = 0.01, lfc_strong = 1, addLegend = FALSE)
+```
+#### 6 hour timepoint
+```{r dolimma_t6}
+## 0hr and 6r
+i <- grep("X0.hr", sampleNames(cmb))
+j <- grep("X6.hr", sampleNames(cmb))
+eset <- cmb[, c(i, j)]
+data <- exprs(eset)
+rownames(data) <- fData(cmb)[["GN"]]
+head(data)
+
+## Create a model matrix
+Time <- as.factor(pData(eset)$Time)
+Replicate <- as.factor(pData(eset)$Replicate)
+design <- model.matrix(~Replicate+Time)
+
+## Perform the fit
+fit <- lmFit(data, design)
+fit <- eBayes(fit)
+
+## Get the results
+res_t6 <- topTable(fit, coef = "Time6", 
+                 adjust.method="BH", number = Inf)
+res_t6 <- addPlottingInfo(res_t6)
+msnset_t6 <- addLimmaInfo(cmb, res_t6)
+
+## Look at p-value distribution
+hist(res_t6[, "P.Value"], breaks = 50, 
+     main = "Histogram of p-values for 0/6hr LPS \n(limma's paired moderated t-test)", 
+     xlab = "p-value")
+
+## save data as a TSV/CSV
+write.exprs(msnset_t6, fDataCols = 131:138,  sep = "\t", 
+            file = "csv/timecourse_t6.tsv")
+
+## plot volcanos
+ggVolcano(res_t6, "6 hours", N = 20, lfc = 0.6, p = 0.01, addLegend = FALSE)
+ggVolcano(res_t6, "6 hours", N = 20, lfc = 0.6, p = 0.01, lfc_strong = 1, addLegend = FALSE)
+```
+#### 4 hour timepoint
+```{r dolimma_t4}
+## 0hr and 4hr
+i <- grep("X0.hr", sampleNames(cmb))
+j <- grep("X4.hr", sampleNames(cmb))
+eset <- cmb[, c(i, j)]
+data <- exprs(eset)
+rownames(data) <- fData(cmb)[["GN"]]
+head(data)
+
+## Create a model matrix
+Time <- as.factor(pData(eset)$Time)
+Replicate <- as.factor(pData(eset)$Replicate)
+design <- model.matrix(~Replicate+Time)
+
+## Perform the fit
+fit <- lmFit(data, design)
+fit <- eBayes(fit)
+
+## Get the results
+res_t4 <- topTable(fit, coef = "Time4", 
+                 adjust.method="BH", number = Inf)
+res_t4 <- addPlottingInfo(res_t4)
+msnset_t4 <- addLimmaInfo(cmb, res_t4)
+
+## Look at p-value distribution
+hist(res_t4[, "P.Value"], breaks = 50, 
+     main = "Histogram of p-values for 0/4hr LPS \n(limma's paired moderated t-test)", 
+     xlab = "p-value")
+
+## save data as a TSV/CSV
+write.exprs(msnset_t4, fDataCols = 131:138,  sep = "\t", 
+            file = "csv/timecourse_t4.tsv")
+
+## plot volcanos
+ggVolcano(res_t4, "4 hours", N = 20, lfc = 0.6, p = 0.01, addLegend = FALSE)
+ggVolcano(res_t4, "4 hours", N = 20, lfc = 0.6, p = 0.01, lfc_strong = 1, addLegend = FALSE)
+```
+
+#### 2 hour timepoint
+```{r dolimma_t2}
+## 0hr and 2hr
+i <- grep("X0.hr", sampleNames(cmb))
+j <- grep("X2.hr", sampleNames(cmb))
+eset <- cmb[, c(i, j)]
+data <- exprs(eset)
+rownames(data) <- fData(cmb)[["GN"]]
+head(data)
+
+## Create a model matrix
+Time <- as.factor(pData(eset)$Time)
+Replicate <- as.factor(pData(eset)$Replicate)
+design <- model.matrix(~Replicate+Time)
+
+## Perform the fit
+fit <- lmFit(data, design)
+fit <- eBayes(fit)
+
+## Get the results
+res_t2 <- topTable(fit, coef = "Time2", 
+                 adjust.method="BH", number = Inf)
+res_t2 <- addPlottingInfo(res_t2)
+msnset_t2 <- addLimmaInfo(cmb, res_t2)
+
+## Look at p-value distribution
+hist(res_t2[, "P.Value"], breaks = 50, 
+     main = "Histogram of p-values for 0/2hr LPS \n(limma's paired moderated t-test)", 
+     xlab = "p-value")
+
+## save data as a TSV/CSV
+write.exprs(msnset_t2, fDataCols = 131:138,  sep = "\t", 
+            file = "csv/timecourse_t2.tsv")
+
+## plot volcanos
+ggVolcano(res_t2, "2 hours", N = 20, lfc = 0.6, p = 0.05, addLegend = FALSE)
+ggVolcano(res_t2, "2 hours", N = 20, lfc = 0.6, p = 0.05, lfc_strong = 1, addLegend = FALSE)
+```
+
+### Summary
+Interleukin 1-beta (IL1B) was the only protein found to be significantly upregulated at all tine points. Upregulated cellular levels of IL1B correlated with increased IL1B secretion into the cell supernatant (see figure XXX below).
+
+```{r linegraphs_elisa}
+library("tidyr")
+
+## read in elisa data
+elisa_il1b_wide <- read.csv("csv/elisa_il1b.csv")
+elise_cxcl_wide <- read.csv("csv/elisa_cscl10.csv")
+
+## convert to long tidy format for ggplot
+elisa_il1b_long <- gather(elisa_il1b_wide, replicate, measurement, X1:X6, factor_key = TRUE)
+elisa_cxcl10_long <- gather(elise_cxcl_wide, replicate, measurement, X1:X6, factor_key = TRUE)
+
+p <- 
+  plotLineGraph(elisa_il1b_wide, "median", linecol = "#1B83E9") +
+  ggtitle("Elisa data: IL-1B") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+q <- plotLineGraph(elise_cxcl_wide, "median", linecol = "#1B83E9") +
+  ggtitle("Elisa data: CXCL10") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+## get quantitation data
+IL1B <- "P01584"
+CXCL10 <- "P02778"
+
+## Load protein data
+x1 <- lpsTimecourse_rep1_mulvey2021
+x2 <- lpsTimecourse_rep2_mulvey2021
+x3 <- lpsTimecourse_rep3_mulvey2021
+
+## convert to long tidy format for ggplot
+lopit_il1b_wide <- t(rbind(exprs(x1[IL1B,]), exprs(x2[IL1B,]),exprs(x3[IL1B,])))
+lopit_cxcl10_wide <- t(rbind(exprs(x1[CXCL10,]), exprs(x2[CXCL10,]),exprs(x3[CXCL10,])))
+lopit_il1b_wide <- data.frame(cbind(Time = c(0, 2, 4, 6, 12, 24), lopit_il1b_wide))
+lopit_cxcl10_wide <- data.frame(cbind(Time = c(0, 2, 4, 6, 12, 24), lopit_cxcl10_wide))
+colnames(lopit_cxcl10_wide) <- colnames(lopit_il1b_wide) <- c("Time", "X1", "X2", "X6")
+lopit_il1b_long <- gather(lopit_il1b_wide, replicate, measurement, X1:X6, factor_key = TRUE)
+lopit_cxcl10_long <- gather(lopit_cxcl10_wide, replicate, measurement, X1:X6, factor_key = TRUE)
+
+## plot quantitation profiles
+r = plotLineGraph(lopit_il1b_wide, 
+                  linecol = "#C50000", 
+                  .ylab = "Abundance\n") +
+  ylim(c(1.5, 7)) +
+  ggtitle("Shotgun: IL-1B") + 
+  theme(plot.title = element_text(hjust = 0.5))
+s = plotLineGraph(lopit_cxcl10_wide, 
+                  linecol = "#C50000", 
+                  .ylab = "Abundance\n") +
+  ylim(c(1.5, 7)) +
+  ggtitle("Shotgun: CXCL10") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(p, q, r, s, ncol = 2, nrow = 2)
+```
+
+12 hour heatmap
+```{r heatmap_12h}
+library("gplots")
+library("plotrix")
+library("scico")
+
+## restructure the gather the data for heatmap
+dat <- cbind(exprs(msnset_t12), fData(msnset_t12))
+rownames(dat) <- NULL
+dat <- dat %>% 
+  filter(Significance != "Not significant") %>% 
+  tibble::column_to_rownames("GN") %>% 
+  select(1:18) %>% as.matrix()
+calcMeds <- function(df, .grepName) {
+  ind <- grep(.grepName, colnames(df))
+  .df <- df[, ind]
+  .mean <- rowMedians(.df)
+  return(.mean)
+}
+t0 <- calcMeds(dat, "X0.hr")
+t2 <- calcMeds(dat, "X2.hr")
+t4 <- calcMeds(dat, "X4.hr")
+t6 <- calcMeds(dat, "X6.hr")
+t12 <- calcMeds(dat, "X12.hr")
+t24 <- calcMeds(dat, "X24.hr")
+dat_meds <- cbind(t0, t2, t4, t6, t12, t24)
+rownames(dat_meds) <- rownames(dat)
+colnames(dat_meds) <- c(0, 2, 4, 6, 12, 24)
+
+## set colour palette - use the scico package
+my_palette <- scico(72, palette = "berlin")
+col_breaks = c(seq(-1,1,length=35), 
+               seq(0,0.8,length=11),  
+               seq(1,0,length=35)) 
+
+## Plot heatmap
+par(mar=c(2,3,3,2))
+heatmap.2(dat_meds, density.info = "none", trace = "none", 
+          col = my_palette, Colv = NA, dendrogram = "row", 
+          key=TRUE, cexCol = 2, cexRow = 1.3, margin = c(6,8), 
+          lhei=c(.8,3.5), lwid=c(0.2,0.8), offsetRow=0.3)
+
+```
+
+## Bayesian temporal clustering
+
+Bayesian temporal clustering was coducted on the shotgun proteomic time-course series and modelled using a mixture model to capture clusters of co-regulated proteins and temporal patterns of protein expression in response to LPS. Replicate experiments were combined using MDI [xxx] where the number of clusters were automatically inferred. 
 
 # Spatial proteomics data analysis
 
@@ -197,7 +767,7 @@ for (i in seq(psms)) {
 ```
 ![](figures/naplot_unstim.png)
 ![*Figure 2. Heatmaps showing missing value distributions per set and replciate*](figures/naplot_lps.png)
-*Figure 2. Heatmaps showing missing value distributions per set and replciate*
+*Figure 2. Heatmaps showing missing value distributions per set and replicate*
 
 The above `naPlots` show that missing values tend to accumulate at the end of the gradient, and more specifically in the first few fractions of the gradient of each experiment, which classically reflect the gradient distribution e.g. PSMs that are often highly mitochondrial have a huge signal in the heavy channels but little elsewhere in the gradient and thus can result in missing values in the other channels. It is also common to find biologically relevant missing values such as those resulting from the absence of the low abundance of ions. As values do not appear to be missing at random we use a left-censored deterministic minimal value approach, `MinDet` in `MSnbase`.
 
@@ -207,7 +777,7 @@ psms.imputed <- lapply(psms, function(z) impute(z, method = "MinDet"))
 
 PSMs were quality controlled post-imputation and then combined to protein level by calculating the median of all PSM intensities corresponding to the leading Uniprot Accession number for each protein group.
 
-### Normalise
+### Data normalisation
 
 Following the standard [pRoloc workflow](https://f1000research.com/articles/5-2926) [6] PSMs are scaled into the same intensity interval by dividing each intensity by the `sum` of the intensities for that quantitative feature. This transformation of the data assures cancellation of the effect of the absolute intensities of the quantitative features along the rows, and focuses subsequent analyses on the relative profiles along the sub-cellular channels. This is important for spatial proteomic experiments are proteins that co-localise in a cell are known to exhibit similar quantitative profiles across the gradient fractions employed [8].
 
@@ -215,7 +785,7 @@ Following the standard [pRoloc workflow](https://f1000research.com/articles/5-29
 psms.imputed.norm <- lapply(psms.imputed, function(z) normalise(z,  "sum"))
 ```
 
-### Aggregate to protein level
+### Aggregation to protein
 
 We use all available PSMs for quantification and aggregate PSMs to proteins using the `combineFeatures` function in `MSnbase` by calculating the median of all PSM intensities corresponding to the leading Uniprot Accession number for each protein group.
 
@@ -857,7 +1427,6 @@ Supp Fig S4
 #### Mitochondrial and lysosomal proteome (Fu et al., 2020)
 Supp Fig S5
 
-# Temporal proteomics analysis
 
 # Source code 
 
