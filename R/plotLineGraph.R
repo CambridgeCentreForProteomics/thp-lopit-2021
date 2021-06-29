@@ -1,6 +1,7 @@
 plotLineGraph <- function(data, fun = c("mean", "median"), 
                          showBars = FALSE, linecol = "#C50000",
-                         .ylab = "Release (pg/ml)\n") {
+                         .ylab = "Release (pg/ml)\n",
+                         themeSize = 20) {
   sum_dat <- gather(data, replicate, measurement, X1:X6, factor_key = TRUE)
   if (fun == "mean") {
     sum_dat <- summarySE(sum_dat, measurevar = "measurement", groupvars = "Time")
@@ -21,8 +22,8 @@ plotLineGraph <- function(data, fun = c("mean", "median"),
     scale_x_discrete(limits = seq(0, 24, by = 2)) +
     xlab("\nTime (hours)") +
     ylab(.ylab) +
-    theme_classic(base_size = 20) +
-    theme(axis.text = element_text(color = "black", size = 20)) 
+    theme_classic(base_size = themeSize) +
+    theme(axis.text = element_text(color = "black", size = themeSize)) 
   
   if (showBars) 
     p <- p + geom_errorbar(aes(ymin=top, ymax=bottom), width=.3, size = 1, col = linecol)

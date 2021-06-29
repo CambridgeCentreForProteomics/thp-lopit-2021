@@ -1,5 +1,6 @@
 *.pages
 figures/*.pdf
+*2021.pdf
 
 # History files
 .Rhistory

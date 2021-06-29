@@ -47,8 +47,8 @@ getGN <- function(x) {
 ## add plotting info to display significantly differently expressed proteins
 addPlottingInfo <- function(x, p = 0.01, lfc = 0.6, lfc_strong) {
   if (missing(lfc_strong)) {
-    ll <- c(paste0("Upregulated (FDR < ", p, ", log2FC > ", lfc1, ")"),
-            paste0("Downregulated (FDR < ", p, ", log2FC < -", lfc1, ")"),
+    ll <- c(paste0("Upregulated (FDR < ", p, ", log2FC > ", lfc, ")"),
+            paste0("Downregulated (FDR < ", p, ", log2FC < -", lfc, ")"),
             "Not significant")
     x$Significance <- ifelse(x$adj.P.Val < p & x$logFC > lfc, ll[1], ll[3])
     getS <- x$adj.P.Val < p & x$logFC < -lfc
@@ -56,9 +56,9 @@ addPlottingInfo <- function(x, p = 0.01, lfc = 0.6, lfc_strong) {
       x$Significance[getS] <- ll[2]
     x$Significance <- factor(x$Significance, levels = ll)
   } else {
-    ll <- c(paste0("Upregulated (FDR < ", p, ", log2FC > ", lfc1, ")"),
+    ll <- c(paste0("Upregulated (FDR < ", p, ", log2FC > ", lfc, ")"),
             paste0("Upregulated (FDR < ", p, ", log2FC > ", lfc_strong, ")"),
-            paste0("Downregulated (FDR < ", p, ", log2FC < -", lfc1, ")"),
+            paste0("Downregulated (FDR < ", p, ", log2FC < -", lfc, ")"),
             paste0("Downregulated (FDR < ", p, ", log2FC < -", lfc_strong, ")"),
             "Not significant")
     x$Significance <- ifelse(x$adj.P.Val < p & x$logFC > lfc, ll[1], ll[5])
@@ -91,6 +91,7 @@ ggVolcano <- function(x, mytitle = "", p = 0.01, highlight, N,
                       text.size = 34, 
                       geom.point.size = 6,
                       legend.text.size = 27,
+                      label.text.size = 6,
                       lfc = 0.6, 
                       legend_pos_x = .77,
                       legend_pos_y = .065,
@@ -165,7 +166,7 @@ ggVolcano <- function(x, mytitle = "", p = 0.01, highlight, N,
     gg <- gg +
       geom_label_repel(data = y,    
                        aes(label = GN, colour = Significance),    
-                       size = 8,   
+                       size = label.text.size,   
                        box.padding = unit(.4, "lines"),  
                        point.padding = unit(1, "lines"),
                        show.legend = FALSE,
@@ -180,7 +181,7 @@ ggVolcano <- function(x, mytitle = "", p = 0.01, highlight, N,
     gg <- gg +
       geom_label_repel(data = y,    
                        aes(label = GN, colour = Significance),    
-                       size = 8,   
+                       size = label.text.size,   
                        box.padding = unit(.4, "lines"),  
                        point.padding = unit(1, "lines"),
                        show.legend = FALSE,
