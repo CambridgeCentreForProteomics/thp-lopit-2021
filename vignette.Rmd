@@ -390,6 +390,8 @@ source("r/ggVolcano.R")
 
 #### 24 hour timepoint
 
+The below results of the differential analysis at each time point are written to the `csv` directory of this repo, Supplementary Table 1 of Mulvey et al 2021 and are also stored in the `fData` of the `lpsTimecourse_mulvey2021` dataset found in `pRolocdata` for easy access.
+
 ```{r dolimma_t24, message=FALSE, warning=FALSE}
 library("limma")
 ## 0hr and 24hr
@@ -421,6 +423,7 @@ hist(res_t24[, "P.Value"], breaks = 50,
      xlab = "p-value")
 
 ## save data as a TSV/CSV
+write.csv(res_t24, file = "csv/limma_t24.csv")
 write.exprs(msnset_t24, fDataCols = 131:138,  sep = "\t", 
             file = "csv/timecourse_t24.tsv")
 ```
@@ -433,7 +436,7 @@ We can now take this output and append it to our `MSnSet` and then plot the resu
 
 The `ggVolcano` function plots the results on a volcano plot. 
 
-```{r plotVolcano_t24, message=FALSE, warning=FALSE, fig.show="hide", eval=FALSE}
+```{r plotVolcano_t24, message=FALSE, warning=FALSE, fig.show="hide"}
 library("ggplot2")
 library("dplyr")
 library("ggrepel")
@@ -477,6 +480,7 @@ hist(res_t12[, "P.Value"], breaks = 50,
      xlab = "p-value")
 
 ## save data as a TSV/CSV
+write.csv(res_t12, file = "csv/limma_t12.csv")
 write.exprs(msnset_t12, fDataCols = 131:138,  sep = "\t", 
             file = "csv/timecourse_t12.tsv")
 ```
@@ -522,6 +526,7 @@ hist(res_t6[, "P.Value"], breaks = 50,
      xlab = "p-value")
 
 ## save data as a TSV/CSV
+write.csv(res_t6, file = "csv/limma_t6.csv")
 write.exprs(msnset_t6, fDataCols = 131:138,  sep = "\t", 
             file = "csv/timecourse_t6.tsv")
 ```
@@ -567,6 +572,7 @@ hist(res_t4[, "P.Value"], breaks = 50,
      xlab = "p-value")
 
 ## save data as a TSV/CSV
+write.csv(res_t4, file = "csv/limma_t4.csv")
 write.exprs(msnset_t4, fDataCols = c(131:138),  sep = "\t", 
             file = "csv/timecourse_t4.tsv")
 ```
@@ -613,8 +619,8 @@ hist(res_t2[, "P.Value"], breaks = 50,
      xlab = "p-value")
 
 ## save data as a TSV/CSV
-write.exprs(msnset_t2, fDataCols = 131:138,  sep = "\t", 
-            file = "csv/timecourse_t2.tsv")
+write.csv(res_t2, file = "csv/limma_t2.csv")
+write.csv(res_t2, file = "csv/limmaResults_t2.csv")
 ```
 ```{r plotvolcano2, eval=FALSE}
 ## plot volcanos
@@ -629,113 +635,6 @@ ggVolcano(res_t2, "2 hours", N = 20, lfc = 0.6,
 
 ### Summary
 A total of 311 proteins were found to be altered in abundance during the time course of LPS stimulation, with statistical significance (adjusted p-value < 0.01 and log2FC > 0.6) (Supplementary Table 1 of [@Mulvey:2021]). We do not discuss the functional effects of these changes in detail in this workflow and instead we refer readers to the Mulvey et al 2021.
-
-Interleukin 1-beta (IL1B) was the only protein found to be significantly upregulated at all tine points. Upregulated cellular levels of IL1B correlated with increased IL1B secretion into the cell supernatant (see figure  below).
-
-```{r linegraphs_elisa, warning=FALSE, message=FALSE, fig.height=8}
-source("r/plotLineGraph.R")
-library("ggplot2")
-library("tidyr")
-library("Rmisc")
-library("gridExtra")
-
-## read in elisa data
-elisa_il1b_wide <- read.csv("csv/elisa_il1b.csv")
-elise_cxcl_wide <- read.csv("csv/elisa_cscl10.csv")
-
-## convert to long tidy format for ggplot
-elisa_il1b_long <- gather(elisa_il1b_wide, replicate, measurement, X1:X6, factor_key = TRUE)
-elisa_cxcl10_long <- gather(elise_cxcl_wide, replicate, measurement, X1:X6, factor_key = TRUE)
-
-p <- 
-  plotLineGraph(elisa_il1b_wide, "median", linecol = "#1B83E9") +
-  ggtitle("Elisa data: IL-1B") + 
-  theme(plot.title = element_text(hjust = 0.5))
-
-q <- plotLineGraph(elise_cxcl_wide, "median", linecol = "#1B83E9") +
-  ggtitle("Elisa data: CXCL10") + 
-  theme(plot.title = element_text(hjust = 0.5))
-
-## get quantitation data
-IL1B <- "P01584"
-CXCL10 <- "P02778"
-
-## Load protein data
-x1 <- lpsTimecourse_rep1_mulvey2021
-x2 <- lpsTimecourse_rep2_mulvey2021
-x3 <- lpsTimecourse_rep3_mulvey2021
-
-## convert to long tidy format for ggplot
-lopit_il1b_wide <- t(rbind(exprs(x1[IL1B,]), exprs(x2[IL1B,]),exprs(x3[IL1B,])))
-lopit_cxcl10_wide <- t(rbind(exprs(x1[CXCL10,]), exprs(x2[CXCL10,]),exprs(x3[CXCL10,])))
-lopit_il1b_wide <- data.frame(cbind(Time = c(0, 2, 4, 6, 12, 24), lopit_il1b_wide))
-lopit_cxcl10_wide <- data.frame(cbind(Time = c(0, 2, 4, 6, 12, 24), lopit_cxcl10_wide))
-colnames(lopit_cxcl10_wide) <- colnames(lopit_il1b_wide) <- c("Time", "X1", "X2", "X6")
-lopit_il1b_long <- gather(lopit_il1b_wide, replicate, measurement, X1:X6, factor_key = TRUE)
-lopit_cxcl10_long <- gather(lopit_cxcl10_wide, replicate, measurement, X1:X6, factor_key = TRUE)
-
-## plot quantitation profiles
-r = plotLineGraph(lopit_il1b_wide, 
-                  linecol = "#C50000", 
-                  .ylab = "Abundance\n",
-                  themeSize = 14) +
-  ylim(c(1.5, 7)) +
-  ggtitle("Shotgun: IL-1B") + 
-  theme(plot.title = element_text(hjust = 0.5))
-s = plotLineGraph(lopit_cxcl10_wide, 
-                  linecol = "#C50000", 
-                  .ylab = "Abundance\n",
-                  themeSize = 14) +
-  ylim(c(1.5, 7)) +
-  ggtitle("Shotgun: CXCL10") + 
-  theme(plot.title = element_text(hjust = 0.5))
-
-grid.arrange(p, q, r, s, ncol = 2, nrow = 2)
-```
-
-12 hour heatmap
-```{r heatmap_12h, fig.width=8, fig.height=10, warning=FALSE, message=FALSE}
-library("gplots")
-library("plotrix")
-library("scico")
-
-## restructure the gather the data for heatmap
-dat <- cbind(exprs(msnset_t12), fData(msnset_t12))
-rownames(dat) <- NULL
-dat <- dat %>% 
-  filter(Significance != "Not significant") %>% 
-  tibble::column_to_rownames("GN") %>% 
-  select(1:18) %>% as.matrix()
-calcMeds <- function(df, .grepName) {
-  ind <- grep(.grepName, colnames(df))
-  .df <- df[, ind]
-  .mean <- rowMedians(.df)
-  return(.mean)
-}
-t0 <- calcMeds(dat, "X0.hr")
-t2 <- calcMeds(dat, "X2.hr")
-t4 <- calcMeds(dat, "X4.hr")
-t6 <- calcMeds(dat, "X6.hr")
-t12 <- calcMeds(dat, "X12.hr")
-t24 <- calcMeds(dat, "X24.hr")
-dat_meds <- cbind(t0, t2, t4, t6, t12, t24)
-rownames(dat_meds) <- rownames(dat)
-colnames(dat_meds) <- c(0, 2, 4, 6, 12, 24)
-head(dat_meds)
-
-## set colour palette - use the scico package
-my_palette <- scico(72, palette = "berlin")
-col_breaks = c(seq(-1,1,length=35), 
-               seq(0,0.8,length=11),  
-               seq(1,0,length=35)) 
-
-## Plot heatmap
-heatmap.2(dat_meds, density.info = "none", trace = "none", 
-          col = my_palette, Colv = NA, dendrogram = "row", 
-          key=TRUE, cexCol = 2, cexRow = 1.3, margin = c(6,8), 
-          lhei=c(.8,3.5), lwid=c(0.2,0.8), offsetRow=0.3)
-
-```
 
 ## Bayesian temporal clustering
 
@@ -788,7 +687,7 @@ for (i in 7:12) {
 ```
 
 ## Gene Ontology enrichment
-Temporal clusters were functionally annotated by using the Gene Ontology (GO) [xxx]. For each cluster output from the Bayesian temporal clustering, in turn, an enrichment test for biological process (BP), cellular component (CC) and molecular function (MF) annotations, was carried out using the Database for Annotation, Visualisation and Integrated Discovery (DAVID v6.8; https://david.ncifcrf.gov/) where a cutoff of < 0.05 was applied according to the Benjamini-Hochberg procedure [xxx]. The GO annotation enrichment results are found in Supplementary Table 4 of Mulvey et al 2021.
+Temporal clusters were functionally annotated by using the Gene Ontology (GO) [@Ashburner:2000]. For each cluster output from the Bayesian temporal clustering, in turn, an enrichment test for biological process (BP), cellular component (CC) and molecular function (MF) annotations, was carried out using the Database for Annotation, Visualisation and Integrated Discovery (DAVID v6.8; https://david.ncifcrf.gov/) where a cutoff of < 0.05 was applied according to the Benjamini-Hochberg procedure [@Benjamini1995]. The GO annotation enrichment results are found in Supplementary Table 4 of Mulvey et al 2021.
 
 In the below code chunk some of the results from the GO enrichment (Figure 3 of Mulvey et al. 2021). GOCC, GOMF and GOBP annotation term enrichment for the the clusters are shown below where the -log10(adjusted p-value) is shown along the x-axis and most highly enriched term along the y-axis. The numbers within each barplot refer to the number of proteins associated with the term in each cluster.
 
@@ -1562,7 +1461,374 @@ Supp Fig S4
 #### Mitochondrial and lysosomal proteome (Fu et al., 2020)
 Supp Fig S5
 
-# Figures from Mulvey et al
+# Figures from the manuscipt
+
+## Main Figures
+
+### Figure 1
+Figure 1 was not produced in R. The schematic workflow was generated in Inkscape.
+
+### Figure 2
+Figure 2 shows the time course of quantitative abundance changes in proteins during 24 h of LPS stimulation The volcano plots show the abundance of all 4,292 time-course proteins at 2 h, 4 h, 6 h, 12 h and 24 h of LPS stimulation.  
+
+```{r figure2, warning=FALSE, message=FALSE, fig.height=8}
+source("r/ggVolcano.R")
+## https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/ggVolcano.R
+
+library("ggplot2")
+library("ggrepel")
+library("gridExtra")
+
+t_2 <- read.csv("csv/limma_t2.csv", row.names = 1)
+t_4 <- read.csv("csv/limma_t4.csv", row.names = 1)
+t_6 <- read.csv("csv/limma_t6.csv", row.names = 1)
+t_12 <- read.csv("csv/limma_t12.csv", row.names = 1)
+t_24 <- read.csv("csv/limma_t24.csv", row.names = 1)
+
+p_2 <- ggVolcano(t_2, "2 hours", N = 20, lfc = 0.6, 
+          p = 0.05, addLegend = FALSE,
+          text.size = 12, base.text.size = 12, 
+          legend.text.size = 12, geom.point.size = 2, 
+          label.text.size = 4)
+p_4 <- ggVolcano(t_4, "4 hours", N = 20, lfc = 0.6, 
+          p = 0.01, addLegend = FALSE,
+          text.size = 12, base.text.size = 12, 
+          legend.text.size = 12, geom.point.size = 2, 
+          label.text.size = 4)
+p_6 <- ggVolcano(t_6, "6 hours", N = 20, lfc = 0.6, 
+          p = 0.01, addLegend = FALSE,
+          text.size = 12, base.text.size = 12, 
+          legend.text.size = 12, geom.point.size = 2, 
+          label.text.size = 4)
+p_12 <- ggVolcano(t_12, "12 hours", N = 20, lfc = 0.6, 
+          p = 0.01, addLegend = FALSE,
+          text.size = 12, base.text.size = 12, 
+          legend.text.size = 12, geom.point.size = 2, 
+          label.text.size = 4)
+p_24 <- ggVolcano(t_24, "24 hours", N = 20, lfc = 0.6, 
+          p = 0.01, addLegend = FALSE,
+          text.size = 12, base.text.size = 12, 
+          legend.text.size = 12, geom.point.size = 2, 
+          label.text.size = 4)
+# grid.arrange(p_2 p_4, p_6, p_12, p_24, nrow = 3, ncol = 2)
+p_2 + ggtitle("Volcano at 2h-LPS")
+p_4 + ggtitle("Volcano at 4h-LPS")
+p_6 + ggtitle("Volcano at 6h-LPS")
+p_12 + ggtitle("Volcano at 12h-LPS")
+p_24 + ggtitle("Volcano at 24h-LPS")
+```
+
+Quantitative values for intracellular proteomics abundance (red) as well as extracellular, cytokine secretion levels as measured by ELISA (blue) for IL1B and CXCL10 expression.
+
+```{r figure2_part2, warning=FALSE, message=FALSE, fig.height=8}
+source("r/plotLineGraph.R")
+# https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/plotLineGraph.R
+
+library("pRoloc")
+library("pRolocdata")
+library("ggplot2")
+library("tidyr")
+library("Rmisc")
+library("gridExtra")
+
+## read in elisa data
+elisa_il1b_wide <- read.csv("csv/elisa_il1b.csv")
+elise_cxcl_wide <- read.csv("csv/elisa_cscl10.csv")
+
+## convert to long tidy format for ggplot
+elisa_il1b_long <- gather(elisa_il1b_wide, replicate, measurement, X1:X6, factor_key = TRUE)
+elisa_cxcl10_long <- gather(elise_cxcl_wide, replicate, measurement, X1:X6, factor_key = TRUE)
+
+p <- 
+  plotLineGraph(elisa_il1b_wide, "median", linecol = "#1B83E9") +
+  ggtitle("Elisa data: IL-1B") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+q <- plotLineGraph(elise_cxcl_wide, "median", linecol = "#1B83E9") +
+  ggtitle("Elisa data: CXCL10") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+## get quantitation data
+IL1B <- "P01584"
+CXCL10 <- "P02778"
+
+## Load protein data
+data("lpsTimecourse_rep1_mulvey2021")
+data("lpsTimecourse_rep2_mulvey2021")
+data("lpsTimecourse_rep3_mulvey2021")
+x1 <- lpsTimecourse_rep1_mulvey2021
+x2 <- lpsTimecourse_rep2_mulvey2021
+x3 <- lpsTimecourse_rep3_mulvey2021
+
+## convert to long tidy format for ggplot
+lopit_il1b_wide <- t(rbind(exprs(x1[IL1B,]), exprs(x2[IL1B,]),exprs(x3[IL1B,])))
+lopit_cxcl10_wide <- t(rbind(exprs(x1[CXCL10,]), exprs(x2[CXCL10,]),exprs(x3[CXCL10,])))
+lopit_il1b_wide <- data.frame(cbind(Time = c(0, 2, 4, 6, 12, 24), lopit_il1b_wide))
+lopit_cxcl10_wide <- data.frame(cbind(Time = c(0, 2, 4, 6, 12, 24), lopit_cxcl10_wide))
+colnames(lopit_cxcl10_wide) <- colnames(lopit_il1b_wide) <- c("Time", "X1", "X2", "X6")
+lopit_il1b_long <- gather(lopit_il1b_wide, replicate, measurement, X1:X6, factor_key = TRUE)
+lopit_cxcl10_long <- gather(lopit_cxcl10_wide, replicate, measurement, X1:X6, factor_key = TRUE)
+
+## plot quantitation profiles
+r = plotLineGraph(lopit_il1b_wide, 
+                  linecol = "#C50000", 
+                  .ylab = "Abundance\n",
+                  themeSize = 14) +
+  ylim(c(1.5, 7)) +
+  ggtitle("Shotgun: IL-1B") + 
+  theme(plot.title = element_text(hjust = 0.5))
+s = plotLineGraph(lopit_cxcl10_wide, 
+                  linecol = "#C50000", 
+                  .ylab = "Abundance\n",
+                  themeSize = 14) +
+  ylim(c(1.5, 7)) +
+  ggtitle("Shotgun: CXCL10") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+grid.arrange(p, q, r, s, ncol = 2, nrow = 2)
+```
+
+Heatmap of the protein abundance for the 72 proteins significantly changed in abundance by 12h-LPS during the time course analysis.
+
+```{r heatmap_12h, fig.width=8, fig.height=10, warning=FALSE, message=FALSE}
+library("gplots")
+library("plotrix")
+library("scico")
+
+## restructure the gather the data for heatmap
+dat <- read.csv("csv/timecourse_t12.tsv", row.names = 1, sep = "\t")
+rownames(dat) <- NULL
+dat <- dat %>% 
+  filter(Significance != "Not significant") %>% 
+  tibble::column_to_rownames("GN") %>% 
+  select(1:18) %>% as.matrix()
+calcMeds <- function(df, .grepName) {
+  ind <- grep(.grepName, colnames(df))
+  .df <- df[, ind]
+  .mean <- rowMedians(.df)
+  return(.mean)
+}
+t0 <- calcMeds(dat, "X0.hr")
+t2 <- calcMeds(dat, "X2.hr")
+t4 <- calcMeds(dat, "X4.hr")
+t6 <- calcMeds(dat, "X6.hr")
+t12 <- calcMeds(dat, "X12.hr")
+t24 <- calcMeds(dat, "X24.hr")
+dat_meds <- cbind(t0, t2, t4, t6, t12, t24)
+rownames(dat_meds) <- rownames(dat)
+colnames(dat_meds) <- c(0, 2, 4, 6, 12, 24)
+
+## set colour palette - use the scico package
+my_palette <- scico(72, palette = "berlin")
+col_breaks = c(seq(-1,1,length=35), 
+               seq(0,0.8,length=11),  
+               seq(1,0,length=35)) 
+
+## Plot heatmap
+heatmap.2(dat_meds, density.info = "none", trace = "none", 
+          col = my_palette, Colv = NA, dendrogram = "row", 
+          key=TRUE, cexCol = 2, cexRow = 1.3, margin = c(6,8), 
+          lhei=c(.8,3.5), lwid=c(0.2,0.8), offsetRow=0.3)
+
+```
+
+
+### Figure 3
+Bayesian temporal clustering of the LPS time series demonstrates clusters of co-regulated proteins. 
+Shown are 6 representative upregulated (A) and 6 downregulated (B) clusters from the Bayesian temporal clustering analysis. 
+
+```{r mdiclustering2, message=FALSE, warning=FALSE, fig.height=12}
+library("RColorBrewer")
+source("r/plotRibbons.R")
+# https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/plotRibbons.R
+
+## Read in MDI clustering results
+mdi_rep1 <- read.csv("csv/mdi_clustering_lpsrep1.csv")
+mdi_rep2 <- read.csv("csv/mdi_clustering_lpsrep2.csv")
+mdi_rep3 <- read.csv("csv/mdi_clustering_lpsrep3.csv")
+mdi <- read.csv("csv/mdi_clusters_output.csv")
+
+# get median normalised intensity
+dat_mat <- list(data.matrix(mdi_rep1[, -1]), 
+                data.matrix(mdi_rep2[, -1]), 
+                data.matrix(mdi_rep3[, -1]))
+av_mat <- apply(simplify2array(dat_mat), c(1,2), median)
+rownames(av_mat) <- mdi_rep1[,1]
+colnames(av_mat) <- c(0, 2, 4, 6, 12, 24)
+
+## plot clusters of interest
+ids <- c(1:6, 9:11, 13, 14, 17)
+mdi_profs <- sapply(ids, function(z) 
+  av_mat[mdi$Protein.Accession[which(mdi$Cluster.Number == z)], ])
+names(mdi_profs) <- paste0("cluster", ids)
+
+## pick a good palette
+ribbonCol <- c(brewer.pal(n = 9, "Oranges")[-c(1:3)],
+           brewer.pal(n = 9, "GnBu")[-c(1:3)])
+
+par(mfrow = c(3,2), mar = c(6, 5, 3, 3))
+for (i in 1:6) {
+  ribbonPlot(mdi_profs[[i]], col = ribbonCol[i], c(0.05, .95), 
+             main = paste("Cluster", ids[i]), cex.main = 2, size = 2)
+}
+
+par(mfrow = c(3,2), mar = c(6, 5, 3, 3))
+for (i in 7:12) {
+  ribbonPlot(mdi_profs[[i]], col = ribbonCol[i], c(0.05, .95), 
+             main = paste("Cluster", ids[i]), cex.main = 2, size = 2)
+}
+```
+
+Gene Ontology Biological Process (GOBP) (C), Cellular Component (GOCC) (D) and Molecular Function (GOMF) (E) annotation term enrichment for the clusters are shown. X-axis: –log10(adj.p-value). The numbers within the barcharts refer to the number of proteins associated with that term in each cluster. 
+
+```{r addGoAnnotationForMDI2, fig.width=10}
+source("r/GObarplot.R")
+# https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/GObarplot.R
+
+GObarplots(filename = "csv/david_data_gobp.csv", cols = ribbonCol, N = 30) +
+  ggtitle("GO Biological Process Terms")
+GObarplots(filename = "csv/david_data_gocc.csv", cols = ribbonCol) +
+  ggtitle("GO Cellular Component Terms")
+GObarplots(filename = "csv/david_data_gomf.csv", cols = ribbonCol, N = 15) +
+  ggtitle("GO Molecular Function Terms")
+```
+
+### Figure 4 
+Assignment of proteins to subcellular organelles using TAGM-MCMC semi-supervised classifier for spatial proteomics data. 
+
+**Top panel**
+Shown are the t-SNE projections of the unstimulated (0h-LPS) and stimulated (12h-LPS) hyperLOPIT datasets. 3,288 proteins are shown in each plot and coloured by organelle protein marker classes. Proteins of unknown location are shown in grey. 
+
+**Bottom panel**
+Shown are the same t-SNE projections following TAGM-MCMC classification. 
+
+```{r plotit, fig.width=10, fig.height=15, warning=FALSE, message=FALSE}
+source("r/prettymap.R")
+# https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/prettymap.R
+
+library("pRoloc")
+library("pRolocdata")
+
+## set organelle colours
+mycol <- c("#88CCEE", "#332288", "#53CAB7", "#0170b4", "#204f20", "#990000",
+           "#E69F00", "#DDCC77", "#E18493", "#AA4499", "#D55E00", "grey")
+setStockcol(mycol)
+setUnknownpch(16)
+
+## get data
+data("thpLOPIT_unstimulated_mulvey2021")
+data("thpLOPIT_lps_mulvey2021")
+data <- commonFeatureNames(thpLOPIT_unstimulated_mulvey2021, thpLOPIT_lps_mulvey2021)
+unst <- data[[1]]
+lps <- data[[2]]
+
+## Generate the t-SNE coords (Figure 4 of [1])
+set.seed(399)
+tsne_unst <- plot2D(unst, method = "t-SNE", plot = FALSE)
+set.seed(399)
+tsne_lps <- plot2D(lps, method = "t-SNE", plot = FALSE)
+
+
+## plot the data as t-SNE maps
+par(mfrow = c(3, 2))        
+oo = c(1:3, 10, 5, 4, 6:7, 9, 8, 11) # specify plot order
+
+## Plot marker proteins
+prettyTSNE(tsne_unst, unst, fcol = "markers", 
+          main = "Subcellular markers\nunstimulated THP1-cells",
+          orgOrder = oo, mainCol = mycol, oulineCol = darken(mycol))
+prettyTSNE(tsne_lps, lps, fcol = "markers",
+          main = "Subcellular markers\n12h-LPS stimulated THP1-cells",
+          orgOrder = oo, mainCol = mycol, oulineCol = darken(mycol))
+
+## Plot results from classification by TAGM-MCMC
+prettyTSNE(tsne_unst, unst, fcol = "localisation.pred", 
+          main = "Classification by TAGM-MCMC\nunstimulated THP1-cells",
+          orgOrder = oo, mainCol = mycol, oulineCol = darken(mycol))
+prettyTSNE(tsne_lps, lps, fcol = "localisation.pred",
+          main = "Classification by TAGM-MCMC\n12h-LPS stimulated THP1-cells",
+          orgOrder = oo, mainCol = mycol, oulineCol = darken(mycol))
+
+## add a legend
+myleg <- c(getMarkerClasses(unst), "Unknown")
+plot(NULL, xaxt='n',yaxt='n',bty='n',ylab='',xlab='', xlim=0:1, ylim=0:1)
+legend("topleft", legend = myleg, col = mycol, bty = "n",
+       pch = 19, cex = 1, pt.cex = 1.6, ncol = 2)
+```
+
+**Alluvial plot of translocating proteins**
+An alluvial plot representing the 253 proteins which are found to move between organelles at 12h-LPS. The number of proteins that are found to translocate to and from each subcellular compartment is denoted next to the labelled alluvial blocks. Colours of organelles are matched to the hyperLOPIT organelle colour key. For the Muley et al 2021 manuscipt the figure labels were optimised in Inkscape.
+
+```{r alluvialplot2, message=FALSE, warning=FALSE}
+source("r/riverplot.R")
+# https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/riverplot.R
+
+library("ggalluvial")
+library("pRoloc")
+library("pRolocdata")
+
+## set organelle colours
+mycol <- c("#88CCEE", "#332288", "#53CAB7", "#0170b4", "#204f20", "#990000",
+           "#E69F00", "#DDCC77", "#E18493", "#AA4499", "#D55E00", "grey")
+setStockcol(mycol)
+setUnknownpch(16)
+
+## get data
+data("thpLOPIT_unstimulated_mulvey2021")
+data("thpLOPIT_lps_mulvey2021")
+data <- commonFeatureNames(thpLOPIT_unstimulated_mulvey2021, thpLOPIT_lps_mulvey2021)
+unst <- data[[1]]
+lps <- data[[2]]
+fData(unst)$translocations <- fData(lps)$translocations <- FALSE
+fData(unst)$translocations[which(fData(unst)$type1_translocation)] <- 
+  fData(lps)$translocations[which(fData(lps)$type1_translocation)] <- "type1"
+fData(unst)$translocations[which(fData(unst)$type2_translocation)] <- 
+  fData(lps)$translocations[which(fData(lps)$type2_translocation)] <- "type2"
+fData(unst)$translocations[which(fData(unst)$type3_translocation)] <- 
+  fData(lps)$translocations[which(fData(lps)$type3_translocation)] <- "type3"
+fData(unst)$translocations[which(fData(unst)$type4_translocation)] <- 
+  fData(lps)$translocations[which(fData(lps)$type4_translocation)] <- "type4"
+
+## generate my colour scheme
+circos_cols <- c(getStockcol(), "grey")
+orgs <- c(union(getMarkerClasses(unst), getMarkerClasses(lps)), "unknown")
+colscheme <- setNames(circos_cols, orgs)  # check levels consistent 
+
+## get indices of translocating proteins
+tl <- !is.na(fData(unst)$translocations)
+
+thp_alluvial <- riverplot(unst[tl, ], lps[tl, ], 
+                          cols = colscheme,
+                          labels = TRUE)
+thp_alluvial + ggtitle("Translocations following 12h-LPS stimulation in THP-1 cells") 
+```
+
+### Figure 5
+Relocalisation of RHO-GTPase trafficking molecules to the PM. Relocalisation of RHO-GTPase family members and accessory proteins were found in response to LPS, including CDC42, RAC1, RHOA, RHOC, SRGAP2, ARHGAP18, APBB1IP. 
+
+These proteins are shown in unstimulated (A) and LPS-stimulated (B) conditions.  
+
+(C) Western blot of CDC42 in the 24h-LPS time course. Anti-actin western blot is shown as control. Molecular weight markers are indicated in kilodaltons (kDa). (D) Confocal image (63x) of THP-1 cells ± LPS for 12 h and labelled with anti-CDC42 (Green) and phalloidin (Red). Scale bar = 10 µm.
+
+### Figure 6 
+Proteins can exhibit both spatial and temporal regulation by LPS. 
+
+15 proteins were altered in abundance during the time-course of LPS stimulation and also translocated to different subcellular regions. The distribution of these 15 proteins in hyperLOPIT space is shown for the unstimulated (A) and the LPS-stimulated conditions (B)
+
+A heatmap of the relative quantitative abundance values for these 15 proteins during the time-course experiment. 
+
+### Figure 7 
+The hyperLOPIT dataset can be used as a scaffold to overlay additional layers of spatial information. 
+
+(A) Three temporal clusters (Clusters 9 (purple), 11 (yellow) and 17 (cyan)) from the Bayesian temporal clustering analysis were overlaid onto the hyperLOPIT plots. 
+
+The temporal profiles of the three Bayesian temporal clusters during the 24h-LPS time-course are also shown. A Fisher’s exact test was used to determine that these three clusters were enriched for individual hyperLOPIT organelles. 
+
+(B) Several protein complexes were overlaid onto the hyperLOPIT plot. (C) Protein-protein interaction partner pairs from the literature were shown to co-localise with each other in hyperLOPIT space.
+
+## Supporting Figures
+
+
 
 # Source code 
 
