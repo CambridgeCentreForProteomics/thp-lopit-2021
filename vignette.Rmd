@@ -34,14 +34,6 @@ output:
 .book .book-body .page-inner section.normal pre {
   font-size: 10px
 }
-
-ul li.title {
-  visibility: hidden;
-}
-ul li.title:before {
-  visibility: visible;
-  content: "Spatial & Temporal Proteomics Vignette";
-}
 </style>
 
 # Abstract
