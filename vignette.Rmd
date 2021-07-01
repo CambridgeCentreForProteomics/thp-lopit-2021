@@ -7,38 +7,34 @@ bibliography: refs.bib
 link-citations: yes
 csl: nature-communications.csl
 output:
-  html_document:
-    toc: true
-    toc_float:
-      collapsed: false
-      smooth_scroll: false
-      fig_caption: true
-      use_bookdown: true
-      number_sections: true
+  rmdformats::robobook:
+    theme: default
+    fig_caption: true
+    use_bookdown: true
+
 ---
 
-<style type="text/css">
-  body{
-  font-size: 11pt;
+<style>
+.book .book-body .page-inner section.normal h1 {
+  font-size: 16px;
 }
-h1{
-  font-size: 20pt;
+
+.book .book-body .page-inner section.normal h2, 
+.book .book-body .page-inner section.normal h3, 
+.book .book-body .page-inner section.normal h4 {
+  font-size: 14px;
 }
-h2{
-  font-size: 18pt;
+
+.book .book-body .page-inner section.normal table  td {
+   font-size: 12px;
 }
-h3{
-  font-size: 16pt;
+.book .book-body .page-inner section.normal pre>code.r {
+  font-size: 10px;
 }
-h4{
-  font-size: 14pt;
+.book .book-body .page-inner section.normal pre {
+  font-size: 10px
 }
-h5{
-  font-size: 12pt;
-}
-h6{
-  font-size: 10pt;
-}
+
 </style>
 
 # Abstract
