@@ -11,7 +11,7 @@ riverplot <- function(msnset,
                       labels = TRUE,
                       cols,
                       ...) {
-  
+  # browser()
   ## add colour scheme if not provided
   if (missing(cols)) {
     ll <- unique(c(levels(df[,1]), levels(df[,2])))
@@ -34,10 +34,18 @@ riverplot <- function(msnset,
   ## set colours for alluvial plot (this is a little tricky as a specific 
   ## ordering is required for ggalluvial)
   names(df) <- c("Condition1", "Condition2", "value")
-  y <- setdiff(unique(df[, "Condition1"]), unique(df[, "Condition2"]))
-  updateCols <- colscheme[-match(y, names(colscheme))]
-  columnCols <- c(colscheme, updateCols)
-  stratCols <- c(rev(colscheme), rev(updateCols))
+  # y <- setdiff(unique(df[, "Condition1"]), unique(df[, "Condition2"]))
+  # updateCols <- colscheme[-match(y, names(colscheme))]
+  # columnCols <- c(colscheme, updateCols)
+  # stratCols <- c(rev(colscheme), rev(updateCols))
+  levs1 <- levels(df$Condition1) 
+  levs2 <- levels(df$Condition2)
+  res1 <- unique(df$Condition1)
+  res2 <- unique(df$Condition2)
+  cond1_cols <- colscheme[levs1[levs1 %in% res1]]
+  cond2_cols <- colscheme[levs2[levs2 %in% res2]]
+  columnCols <- c(cond1_cols, cond2_cols)
+  stratCols <- c(rev(cond1_cols), rev(cond2_cols))
   
   ## plot alluvial/river schematic
   if (labels) {
