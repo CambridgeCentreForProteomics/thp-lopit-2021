@@ -1,5 +1,5 @@
 ---
-title: Computational proteomics of a THP-1 human leukaemia cell line
+title: Vignette - Computational proteomics of a THP-1 human leukaemia cell line
 author: "Lisa M Breckels"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 fontsize: 11pt 
@@ -46,6 +46,16 @@ In this vignette we work with the data at the PSM and protein level which which 
 All analysis in the manuscript is done in the R programming language, unless otherwise stated, using the suite of mass spectrometry spatial proteomics packages [`MSnbase`](https://www.bioconductor.org/packages/release/bioc/html/MSnbase.html)[@MSnbase:2012], [`pRoloc`](https://www.bioconductor.org/packages/release/bioc/html/pRoloc.html)[@pRoloc:2014], [`pRolocGUI`](https://www.bioconductor.org/packages/release/bioc/html/pRolocGUI.html) and [`pRolocdata`](https://bioconductor.org/packages/release/data/experiment/html/pRolocdata.html).
 
 All raw mass spectrometry proteomics data from this study have been deposited to the [ProteomeXchange](http://proteomecentral.proteomexchange.org/cgi/GetDataset) Consortium via the PRIDE partner repository [@pride:2019], with the dataset identifier PXD023509.
+
+## Before you start
+To run through the code in this vignette please download the [THP LOPIT Github repository](https://github.com/CambridgeCentreForProteomics/thp-lopit-2021), the [`R` programming language](https://www.r-project.org) and we also recommend you download [`RStudio` IDE](https://www.rstudio.com/products/rstudio/download/) which is a great interface to R.
+
+Please open RStudio and navigate to the `thp-lopit-2021` directory you have just saved and downloaded. To do this go to menu 
+
+Session -> Set Working Directory -> Choose Directory ...
+
+If you type `getwd` into the R console. You should see the directory name in your path. For more information on how to use RStudio please see [RStudio education website](https://education.rstudio.com) for some nice introductory tutorials. 
+
 
 ## Accessing the data in R
 The `pRolocdata` package is a R [Bioconductor](http://bioconductor.org/) [experiment package](http://bioconductor.org/packages/release/BiocViews.html#___ExperimentData) that collects mass spectrometry-based spatial/organelle and protein-complex datasets from published experiments. Each data is stored in a container called a `MSnSet` instance (see the [`MSnbase`](http://www.bioconductor.org/packages/release/bioc/html/MSnbase.html) for details) which allows users to work seamlessly with the R [`pRoloc`](http://bioconductor.org/packages/release/data/experiment/html/pRolocdata.html) and [`pRolocGUI`](http://bioconductor.org/packages/devel/bioc/html/pRolocGUI.html) software for spatial proteomics data analysis and visualisation. 
