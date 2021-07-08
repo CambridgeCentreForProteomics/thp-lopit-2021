@@ -17,8 +17,8 @@ plotLineGraph <- function(data, fun = c("mean", "median"),
   else (stop(message(paste("Summary stat specified must be mean or median"))))
   
   p <- ggplot(sum_dat, aes(x=Time, y=measurement)) + 
-    geom_line(size = 1.3, color = linecol) +
-    geom_point(size = 4, color = linecol) +
+    geom_line(size = 1, color = linecol) +
+    geom_point(size = 1.5, color = linecol) +
     scale_x_discrete(limits = seq(0, 24, by = 2)) +
     xlab("\nTime (hours)") +
     ylab(.ylab) +

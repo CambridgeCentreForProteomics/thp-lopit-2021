@@ -11,7 +11,8 @@ output:
     theme: default
     fig_caption: true
     use_bookdown: true
-
+editor_options: 
+  chunk_output_type: console
 ---
 
 <style>
@@ -47,7 +48,7 @@ All analysis in the manuscript is done in the R programming language, unless oth
 
 All raw mass spectrometry proteomics data from this study have been deposited to the [ProteomeXchange](http://proteomecentral.proteomexchange.org/cgi/GetDataset) Consortium via the PRIDE partner repository [@pride:2019], with the dataset identifier PXD023509.
 
-## Before you start
+## Before you start {#start}
 To run through the code in this vignette please download the [THP LOPIT Github repository](https://github.com/CambridgeCentreForProteomics/thp-lopit-2021), the [`R` programming language](https://www.r-project.org) and we also recommend you download [`RStudio` IDE](https://www.rstudio.com/products/rstudio/download/) which is a great interface to R.
 
 Please open RStudio and navigate to the `thp-lopit-2021` directory you have just saved and downloaded. To do this go to menu 
@@ -1506,7 +1507,9 @@ knitr::include_graphics("figures/fig13-tl1234.png")
 
 ### Summary table of translocations between conditions
 
-```{r summaryofevents, }
+In the code chunk below we generate a summary table showing the number of translocations between subcellular niches.
+
+```{r summaryofevents, warning=FALSE, message=FALSE}
 df <- makedf(unst[tl, ], lps[tl, ],
             fcol1 = "localisation.pred",
             fcol2 = "localisation.pred",
@@ -1514,7 +1517,9 @@ df <- makedf(unst[tl, ], lps[tl, ],
             mrkCol2 = "markers")
 names(df) <- c("Unstimulated", "LPS", "Number of translocations")
 df <- df[!df$`Number of translocations`==0, ]
-kable(df, caption = "Translocations between subcellular niches following 12h-LPS stimulation")
+kable(df, 
+      caption = "Translocations between subcellular niches following 12h-LPS stimulation",
+      row.names = FALSE)
 ```
 
 ## A scaffold for proteins of interest
@@ -1526,8 +1531,11 @@ Mulvey et al (2021) show that hyperLOPIT provides a means to robustly classify u
 - trafficking proteins (figure \@ref(fig:figSI4))
 - organelle complements from other studies (figure \@ref(fig:figSI5))
 
+We direct readers to the the manuscipt for full details of the results and a summary of our findings. In the proceeding final sections we have included the code used to generate all figures in the manuscript and supplementary information. Please open an issue in the [THP LOPIT Github repository](https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/issues) to report any bugs or issues.
 
 # Figures from the manuscipt
+
+The following sections show all code used to generate the figures in Mulvey et al (2021). As already requested in section \@ref(start)) please clone or download the [THP LOPIT Github repository](https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/) and navigate to this repo inside RStudio/R so that you can access all code which is sourced in this vignette. 
 
 ## Main Figures
 
@@ -1584,9 +1592,30 @@ p_12 + ggtitle("Volcano at 12h-LPS")
 p_24 + ggtitle("Volcano at 24h-LPS")
 ```
 
+```{r fig4volrun, echo=FALSE, fig.show='hold',fig.align='center', fig.width=5, out.width=" 50%"}
+knitr::include_graphics("figures/volcano_LPS_2hr.png")
+```
+
+```{r fig4volrun2, echo=FALSE, fig.show='hold',fig.align='center', out.width=" 50%"}
+knitr::include_graphics("figures/volcano_LPS_4hr.png")
+```
+
+```{r fig4volrun3, echo=FALSE, fig.show='hold',fig.align='center', out.width=" 50%"}
+knitr::include_graphics("figures/volcano_LPS_6hr.png")
+```
+
+```{r fig4volrun4, echo=FALSE, fig.show='hold',fig.align='center', out.width=" 50%", }
+knitr::include_graphics("figures/volcano_LPS_12hr.png")
+```
+
+```{r fig4vol1run5, echo=FALSE, fig.show='hold',fig.align='center', out.width=" 50%"}
+knitr::include_graphics("figures/volcano_LPS_24h.png")
+```
+
+
 Quantitative values for intracellular proteomics abundance (red) as well as extracellular, cytokine secretion levels as measured by ELISA (blue) for IL1B and CXCL10 expression.
 
-```{r figure2_part2, warning=FALSE, message=FALSE, fig.height=8, eval=FALSE}
+```{r figure2_part2, warning=FALSE, message=FALSE, fig.height=4, fig.width=6, eval=TRUE}
 source("r/plotLineGraph.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/plotLineGraph.R
 
@@ -1607,12 +1636,12 @@ elisa_cxcl10_long <- gather(elise_cxcl_wide, replicate, measurement, X1:X6, fact
 
 p <- 
   plotLineGraph(elisa_il1b_wide, "median", 
-                linecol = "#1B83E9", themeSize = 14) +
+                linecol = "#1B83E9", themeSize = 10) +
   ggtitle("Elisa data: IL-1B") + 
   theme(plot.title = element_text(hjust = 0.5))
 
 q <- plotLineGraph(elise_cxcl_wide, "median", 
-                   linecol = "#1B83E9", themeSize = 14) +
+                   linecol = "#1B83E9", themeSize = 10) +
   ggtitle("Elisa data: CXCL10") + 
   theme(plot.title = element_text(hjust = 0.5))
 
@@ -1641,14 +1670,14 @@ lopit_cxcl10_long <- gather(lopit_cxcl10_wide, replicate, measurement, X1:X6, fa
 r = plotLineGraph(lopit_il1b_wide, 
                   linecol = "#C50000", 
                   .ylab = "Abundance\n",
-                  themeSize = 14) +
+                  themeSize = 10) +
   ylim(c(1.5, 7)) +
   ggtitle("Shotgun: IL-1B") + 
   theme(plot.title = element_text(hjust = 0.5))
 s = plotLineGraph(lopit_cxcl10_wide, 
                   linecol = "#C50000", 
                   .ylab = "Abundance\n",
-                  themeSize = 14) +
+                  themeSize = 10) +
   ylim(c(1.5, 7)) +
   ggtitle("Shotgun: CXCL10") + 
   theme(plot.title = element_text(hjust = 0.5))
@@ -1658,7 +1687,7 @@ grid.arrange(p, q, r, s, ncol = 2, nrow = 2)
 
 Heatmap of the protein abundance for the 72 proteins significantly changed in abundance by 12h-LPS during the time course analysis.
 
-```{r heatmap_12h, fig.width=8, fig.height=10, warning=FALSE, message=FALSE, eval=FALSE}
+```{r heatmap_12h, fig.width=5, fig.height=7, warning=FALSE, message=FALSE, eval=TRUE}
 library("gplots")
 library("plotrix")
 library("scico")
@@ -1692,16 +1721,15 @@ my_palette <- scico(72, palette = "berlin")
 ## Plot heatmap
 heatmap.2(dat_meds, density.info = "none", trace = "none", 
           col = my_palette, Colv = NA, dendrogram = "row", 
-          key=TRUE, cexCol = 2, cexRow = 1.3, margin = c(6,8), 
+          key=TRUE, cexCol = 1, cexRow = 1, margin = c(6,8), 
           lhei=c(.8,3.5), lwid=c(0.2,0.8), offsetRow=0.3)
-
 ```
 
 
 ### Figure 3
 Bayesian temporal clustering of the LPS time series demonstrates clusters of co-regulated proteins and GO analysis. 
 
-```{r mdiclustering2, message=FALSE, warning=FALSE, fig.height=8, fig.width=10, eval=FALSE}
+```{r mdiclustering2, message=FALSE, warning=FALSE, fig.height=8, fig.width=7}
 library("RColorBrewer")
 source("r/plotRibbons.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/plotRibbons.R
@@ -1733,18 +1761,18 @@ ribbonCol <- c(brewer.pal(n = 9, "Oranges")[-c(1:3)],
 par(mfrow = c(3,2), mar = c(6, 5, 3, 3))
 for (i in 1:6) {
   ribbonPlot(mdi_profs[[i]], col = ribbonCol[i], c(0.05, .95), 
-             main = paste("Cluster", ids[i]), cex.main = 2, size = 2)
+             main = paste("Cluster", ids[i]), cex.main = 1, size = 1)
 }
 ```
-```{r mdisecond, eval=FALSE, message=FALSE, warning=FALSE, fig.height=8, fig.width=3, fig.cap="Bayesian temporal clustering of the LPS time series demonstrates clusters of co-regulated proteins. Shown are 6 representative upregulated (A) and 6 downregulated (B) clusters from the Bayesian temporal clustering analysis"}
+```{r mdisecond, message=FALSE, warning=FALSE, fig.height=8, fig.width=7}
 par(mfrow = c(3,2), mar = c(6, 5, 3, 3))
 for (i in 7:12) {
   ribbonPlot(mdi_profs[[i]], col = ribbonCol[i], c(0.05, .95), 
-             main = paste("Cluster", ids[i]), cex.main = 2, size = 2)
+             main = paste("Cluster", ids[i]), cex.main = 1, size = 1)
 }
 ```
 
-```{r addGoAnnotationForMDIsi1, fig.width=10, eval=FALSE}
+```{r addGoAnnotationForMDIsi1, fig.width=10}
 source("r/GObarplot.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/GObarplot.R
 
@@ -1752,12 +1780,12 @@ GObarplots(filename = "csv/david_data_gobp.csv", cols = ribbonCol, N = 30) +
   ggtitle("GO Biological Process Terms")
 ```
 
-```{r addGoAnnotationForMDIsi2, fig.width=10, eval=FALSE}
+```{r addGoAnnotationForMDIsi2, fig.width=10}
 GObarplots(filename = "csv/david_data_gocc.csv", cols = ribbonCol) +
   ggtitle("GO Cellular Component Terms")
 ```
 
-```{r addGoAnnotationForMDIsi3, fig.width=10, fig.cap="Gene Ontology Biological Process (GOBP) (C), Cellular Component (GOCC) (D) and Molecular Function (GOMF) (E) annotation term enrichment for the clusters are shown. X-axis: –log10(adj.p-value). The numbers within the barcharts refer to the number of proteins associated with that term in each cluster. "}
+```{r addGoAnnotationForMDIsi3, fig.width=10}
 GObarplots(filename = "csv/david_data_gomf.csv", cols = ribbonCol, N = 15) +
   ggtitle("GO Molecular Function Terms")
 ```
@@ -1765,7 +1793,7 @@ GObarplots(filename = "csv/david_data_gomf.csv", cols = ribbonCol, N = 15) +
 ### Figure 4 
 Assignment of proteins to subcellular organelles using TAGM-MCMC semi-supervised classifier for spatial proteomics data. 
 
-```{r plotit, eval=FALSE, fig.width=10, fig.height=15, warning=FALSE, message=FALSE, fig.cap="(Top panel) Shown are the t-SNE projections of the unstimulated (0h-LPS) and stimulated (12h-LPS) hyperLOPIT datasets. (Bottom panel) Shown are the same t-SNE projections following TAGM-MCMC classification. 3,288 proteins are shown in each plot and coloured by organelle protein marker classes. Proteins of unknown location are shown in grey."}
+```{r plotit, fig.width=10, fig.height=15, warning=FALSE, message=FALSE}
 source("r/prettymap.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/prettymap.R
 
@@ -1821,7 +1849,7 @@ legend("topleft", legend = myleg, col = mycol, bty = "n",
 
 **Alluvial plot of translocating proteins**
 
-```{r alluvialplot2, eval=FALSE, message=FALSE, warning=FALSE, fig.height=7, fig.cap="An alluvial plot representing the 253 proteins which are found to move between organelles at 12h-LPS. The number of proteins that are found to translocate to and from each subcellular compartment is denoted next to the labelled alluvial blocks. Colours of organelles are matched to the hyperLOPIT organelle colour key. For the Muley et al 2021 manuscipt the figure labels were optimised in Inkscape."}
+```{r alluvialplot2, message=FALSE, warning=FALSE, fig.height=8, fig.width=5}
 source("r/riverplot.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/riverplot.R
 
@@ -1866,9 +1894,10 @@ thp_alluvial + ggtitle("Translocations following 12h-LPS stimulation in THP-1 ce
 ```
 
 ### Figure 5
+
 Relocalisation of RHO-GTPase trafficking molecules to the PM. Relocalisation of RHO-GTPase family members and accessory proteins were found in response to LPS, including CDC42, RAC1, RHOA, RHOC, SRGAP2, ARHGAP18, APBB1IP. 
 
-```{r fig5, fig.width=10, fig.height=10, fig.cap="t-SNE maps for the unstimulated (left) and 12h-LPS stimulated (right) showing relocalisation of RHO-GTPase trafficking molecules to the PM", warning=FALSE, message=FALSE}
+```{r fig5, fig.width=10, fig.height=10, warning=FALSE, message=FALSE}
 source("r/prettymap.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/prettymap.R
 
@@ -1953,7 +1982,7 @@ legend("topleft", legend = myleg, col = mycol, bty = "n",
 ### Figure 6 
 Proteins can exhibit both spatial and temporal regulation by LPS. 15 proteins were altered in abundance during the time-course of LPS stimulation and also translocated to different subcellular regions. 
 
-```{r fig6, fig.width=10, fig.height=10, fig.cap="t-SNE maps for the unstimulated (left) and 12h-LPS stimulated (right) showing the distribution of 15 proteins which were altered in abundance during the time-course of LPS stimulation and also translocated to different subcellular regions in hyperLOPIT space.", warning=FALSE, message=FALSE}
+```{r fig6, fig.width=10, fig.height=10, warning=FALSE, message=FALSE}
 source("r/prettymap.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/prettymap.R
 
@@ -2058,7 +2087,8 @@ legend("topleft", legend = myleg, col = mycol, bty = "n",
 
 
 Protein profiles for Sequestosome (Q13501) and CLEC11A (Q9Y240) proteins
-```{r fig6profs, eval=FALSE, warning=FALSE, message=FALSE, fig.height=4, fig.cap="Median temporal abundance profiles for Sequestosome and CLEC11A proteins."}
+
+```{r fig6profs, warning=FALSE, message=FALSE, fig.height=2, fig.width=6}
 source("r/plotLineGraph.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/plotLineGraph.R
 
@@ -2081,20 +2111,25 @@ colnames(lopit_sequ_wide)<- c("Time", "X1", "X2", "X6")
 p = plotLineGraph(lopit_clec_wide, 
                   linecol = "#1B83E9", 
                   .ylab = "Abundance\n",
-                  fun = "median") + ggtitle("CLECL11A") + 
+                  fun = "median", 
+                  themeSize = 10) + 
+  ggtitle("CLECL11A") + 
   theme(plot.title = element_text(hjust = 0.5))
 
 q = plotLineGraph(lopit_sequ_wide, 
                   linecol = "#C50000", 
                   .ylab = "Abundance\n",
-                  fun = "median") + ggtitle("Sequestosome") +
+                  fun = "median",
+                  themeSize = 10) + 
+  ggtitle("Sequestosome") +
   theme(plot.title = element_text(hjust = 0.5))
 
 grid.arrange(q, p, ncol = 2)
 ```
 
 A heatmap of the relative quantitative abundance values for these 15 proteins during the time-course experiment. 
-```{r heatmapfig6, fig.width=8, fig.height=5, fig.cap="A heatmap of the relative quantitative abundance values for these 15 proteins during the time-course experiment.", warning=FALSE, message=FALSE}
+
+```{r heatmapfig6, fig.width=5, fig.height=5, warning=FALSE, message=FALSE}
 library(pRolocdata)
 library(pRoloc)
 library(gplots)
@@ -2129,14 +2164,14 @@ my_palette <- colorRampPalette(c("#1B83E9", "grey", "#C50000"))(n = 10)
 
 heatmap.2(dat_meds, density.info = "none", trace = "none", 
           col = my_palette, Colv = NA, dendrogram = "row", 
-          key=TRUE, cexCol = 2, cexRow = 1.3, margin = c(6,8), 
-          lwid=c(.3,1), lhei = c(.16, .6), offsetRow=0.3)
+          key=TRUE, cexCol = 1, cexRow = 1, margin = c(6,8), 
+          lwid=c(.4,1), lhei = c(.18, .6), offsetRow=0.3)
 ```
 
 ### Figure 7 
 The hyperLOPIT dataset can be used as a scaffold to overlay additional layers of spatial information. 
 
-```{r fig7, warning=FALSE, message=FALSE, fig.width=12, fig.height=6, fig.cap="Spatial map of the hyperlOPIT data from 12h-LPS stimulated cells with temporal clusters 9, 11 and 17 overlaid (purple = cluster 9 (chromatin enriched, adj.p-value = 6.9e-10), yellow = cluster 11 (mitochondria enriched, adj.p-value = 9.6e-09), cyan = cluster 17 (cytosol enriched, adj.p-value = 1.8e-13)). A Fisher’s exact test was used to determine that these three clusters were enriched for individual hyperLOPIT organelles."}
+```{r fig7, warning=FALSE, message=FALSE, fig.width=12, fig.height=6}
 source("r/prettymap.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/prettymap.R
 
@@ -2212,7 +2247,7 @@ legend("topleft", legend = myleg,
 ```
 
 
-```{r fig7ribbons, warning=FALSE, fig.width=12, fig.height=4, fig.cap="The temporal profiles of the three Bayesian temporal clusters during the 24h-LPS time-course"}
+```{r fig7ribbons, warning=FALSE, fig.width=12, fig.height=4}
 library("RColorBrewer")
 source("r/plotRibbons.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/plotRibbons.R
@@ -2250,7 +2285,7 @@ ribbonPlot(mdi_profs$cluster17, col = mycol[3], c(0.05, .95),
 ```
 
 
-```{r fig7c, message=FALSE, warning=FALSE, fig.width=10, fig.height=10, fig.cap="Several protein complexes were overlaid onto the hyperLOPIT plot.Protein-protein interaction partner pairs from the literature were shown to co-localise with each other in hyperLOPIT space"}
+```{r fig7c, message=FALSE, warning=FALSE, fig.width=10, fig.height=10}
 source("r/foi.R")
 source("r/prettymap.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/prettymap.R
@@ -2754,7 +2789,7 @@ venn.diagram(
 )
 ```
 
-```{r SIfig1, warning=FALSE, fig.width=10, fig.height=5, fig.cap="t-SNE spatial map showing the localisation of four cytokine proteins that were imputed from incomplete TMT profiles and overlaid onto the LPS stimulated hyperLOPIT map, to give an indication of their steady state localiation."}
+```{r SIfig1, warning=FALSE, fig.width=10, fig.height=5}
 source("r/prettymap.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/prettymap.R
 
@@ -2817,7 +2852,7 @@ legend("topleft", legend = myleg, col = mycol, bty = "n",
        pch = 19, cex = 1, pt.cex = 1.6, ncol = 1)
 ```
 
-```{r figs1g, fig.width=12, eval=FALSE, fig.height=10, warning=FALSE, message=FALSE, fig.cap="Heatmap showing the distribution and overlap in organelle assignments between the TAGM classifications in the unstimulated data and classifications in the LPS-stimulated data"}
+```{r figs1g, fig.width=7, fig.height=6, warning=FALSE, message=FALSE}
 source("R/intersection.R")
 ## Add a label to the LPS dataset so when we combine it  
 ## with the unstimulated the information is not lost
@@ -2828,11 +2863,14 @@ cmb <- MSnbase::combine(unst, .lps)  # now combine all results
 df_all <- compareDatasets(cmb, 
                           fcol1 = "localisation.pred",
                           fcol2 = "localisation.pred.LPS")
-ggheatmap(df_all, title = "TAGM locations between conditions")
+ggheatmap(df_all, title = "TAGM locations between conditions", size = 10)
 ```
 
 ### Supplementary Figure 2
-```{r SIfig2, fig.width=10, fig.height=10, fig.cap="t-SNE map showing the 253 translocating proteins from the hyperLOPIT experiments and plotted by translocation class."}
+
+#### Plot the proteins that move on a spatial map by translocation type
+
+```{r SIfig2, fig.width=10, fig.height=10}
 source("r/prettymap.R")
 source("r/foi.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/prettymap.R
@@ -2925,7 +2963,9 @@ legend("topleft", legend = myleg, col = mycol, bty = "n",
        pch = 19, cex = 1, pt.cex = 1.6, ncol = 1)
 ```
 
-```{r circosplot2, eval=FALSE, message=FALSE, warning=FALSE, eval=TRUE, fig.width=9, fig.height=9, fig.cap="Circos plot showing the flow of translocating proteins between different subcellular compartments."}
+#### Generate circos plot
+
+```{r circosplot2, eval=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=6}
 source("R/circos.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/circos.R
 
@@ -2977,7 +3017,11 @@ customChord(unst[tl, ], lps[tl, ],
 ```
 *Note: labels were optimised in Inkscape*
 
-```{r figSIBCD, fig.width=10, fig.height=15, eval = FALSE, fig.cap="t-SNE maps showing (top) 67 proteins which were found to translocate to or from the cytosol cluster. (middle) Shown are 57 proteins which were found to translocate to or from the nucleus cluster. (bottom) Shown are 49 proteins which were found to translocate to or from the lysosome cluster."}
+#### Plot spatial maps of each protein set
+
+The R file `foi.R` contains the protein sets and their Uniprot accessions.
+
+```{r figSIBCD, fig.width=10, fig.height=15, eval=FALSE}
 source("r/prettymap.R")
 source("r/foi.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/prettymap.R
@@ -3068,6 +3112,60 @@ highlightOnPlot(object = tsne_lps, pch = 8, cex = 1.7,
                 args = list(lps))
 ```
 
+```{r includefig}
+knitr::include_graphics("figures/Screenshot-tls-sifig2.png")
+```
+
+#### Plot translocations on alluvial plots for each subset of proteins. 
+
+```{r minialluvials, message=FALSE, warning=FALSE, fig.width=3, fig.height=10}
+library("pRoloc")
+library("pRolocdata")
+library("dplyr")
+library("gridExtra")
+library("ggalluvial")
+library("scales")
+source("r/riverplot.R")
+source("r/foi.R")    
+
+
+## get data
+data("thpLOPIT_unstimulated_mulvey2021")
+data("thpLOPIT_lps_mulvey2021")
+data <- commonFeatureNames(thpLOPIT_unstimulated_mulvey2021, thpLOPIT_lps_mulvey2021)
+unst <- data[[1]]
+lps <- data[[2]]
+
+
+## set organelle colours
+mycol <- c("#88CCEE", "#332288", "#53CAB7", "#0170b4", "#204f20", "#990000",
+           "#E69F00", "#DDCC77", "#E18493", "#AA4499", "#D55E00", "grey")
+setStockcol(mycol)
+setUnknownpch(16)
+orgs <- c(union(getMarkerClasses(unst), getMarkerClasses(lps)), "unknown")
+colscheme <- setNames(mycol, orgs)  # check levels consistent 
+
+
+## plot these nuclear translocations
+thp_alluvial <- riverplot(unst[nuclear, ], lps[nuclear, ], 
+                          cols = colscheme,
+                          labels = TRUE)
+p = thp_alluvial + ggtitle("Nuclear translocations") 
+
+## plot these nuclear translocations
+thp_alluvial <- riverplot(unst[cytosol, ], lps[cytosol, ], 
+                          cols = colscheme,
+                          labels = TRUE)
+q = thp_alluvial + ggtitle("Cytosol translocations") 
+
+## plot these nuclear translocations
+thp_alluvial <- riverplot(unst[lysosome, ], lps[lysosome, ], 
+                          cols = colscheme,
+                          labels = TRUE)
+r = thp_alluvial + ggtitle("Lysosme translocations") 
+grid.arrange(p, q, r, nrow = 3)
+```
+
 ### Supplementary Figure 3
 
 - Shown are 37 proteins which were found to translocate between the cytosol and the nuclear clusters. 
@@ -3075,7 +3173,7 @@ highlightOnPlot(object = tsne_lps, pch = 8, cex = 1.7,
 - Shown are 70 proteins found to translocate to or from the PM. 
 - Shown are three proteins known to co-localise: SQSTM1, CALCOCO2, TOM1.
 
-```{r figSI3, fig.width=10, fig.height=18, fig.cap="Summary of nucleo-cytoplasmic and plasma membrane translocation events. (A) Shown are 37 proteins which were found to translocate between the cytosol and the nuclear clusters. (B) Shown are 9 proteins found to translocate between subnuclear compartments. (C) Shown are 70 proteins found to translocate to or from the PM. (D) Shown are three proteins known to co-localise: SQSTM1, CALCOCO2, TOM1", message=FALSE, warning=FALSE}
+```{r figSI3, fig.width=10, fig.height=18, message=FALSE, warning=FALSE}
 source("r/prettymap.R")
 source("r/foi.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/prettymap.R
@@ -3225,7 +3323,10 @@ text(x = 20, y = -16, labels = "TOM1", font = 2, col = "black", cex = 1)
 ```
 
 ### Supplementary Figure 4
-```{r figSI4, fig.width=10, fig.height=15, fig.cap="T-SNE plots of translocating proteins involved in trafficking. (A) Shown are 8 trafficking proteins which were found to translocate following LPS stimulation. (B) Shown are 12 RAB GTPase trafficking proteins which were found to translocate following LPS stimulation. (C) 11 members of the ESCRT complex."}
+
+T-SNE plots of translocating proteins involved in trafficking. (A) Shown are 8 trafficking proteins which were found to translocate following LPS stimulation. (B) Shown are 12 RAB GTPase trafficking proteins which were found to translocate following LPS stimulation. (C) 11 members of the ESCRT complex
+
+```{r figSI4, fig.width=10, fig.height=15}
 source("r/prettymap.R")
 source("r/foi.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/prettymap.R
@@ -3375,7 +3476,10 @@ text(x = -2, y = -20, labels = "CHMP2B", font = 2, col = "black", cex = 1)
 ```
 
 ### Supplementary Figure 5
-```{r figSI5, fig.width=12, fig.height=21, fig.cap=" The hyperLOPIT plots can be used as a scaffold to overlay proteins of interest, such as those identified by other subcellular proteomic studies. Shown are organellar proteins identified in four different studies, which have been overlaid onto the hyperLOPIT plots to validate their subcellular localisations. (A) Secretome proteome (Meissner et al., 2013), (B) cell surface proteome (Kalxdorf et al., 2017), (C) the RNA binding proteome (Liepelt et al., 2016) and (D) mitochondrial and lysosomal proteome (Fu et al., 2020)."}
+
+The hyperLOPIT plots can be used as a scaffold to overlay proteins of interest, such as those identified by other subcellular proteomic studies. Shown are organellar proteins identified in four different studies, which have been overlaid onto the hyperLOPIT plots to validate their subcellular localisations. (A) Secretome proteome (Meissner et al., 2013), (B) cell surface proteome (Kalxdorf et al., 2017), (C) the RNA binding proteome (Liepelt et al., 2016) and (D) mitochondrial and lysosomal proteome (Fu et al., 2020).
+
+```{r figSI5, fig.width=12, fig.height=21}
 source("r/prettymap.R")
 source("r/foi.R")
 # https://github.com/CambridgeCentreForProteomics/thp-lopit-2021/blob/main/R/prettymap.R

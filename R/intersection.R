@@ -51,10 +51,10 @@ compareDatasets <- function(MSnSet,
 
 
 ## plot heatmap of assignments
-ggheatmap <- function(df, title = ""){
+ggheatmap <- function(df, title = "", size = 24){
   ggplot(df, aes(loc_hl, loc_dc, fill=100*ref_dc)) + 
     geom_tile(colour="grey80") +
-    geom_text(aes(label=overlap), size=8) +
+    geom_text(aes(label=overlap), size=3) +
     # theme(axis.text.x=element_text(angle=90, vjust=0.5, hjust=1)) +
     scale_fill_gradient(low="white", high="steelblue",
                         name="% Intersection\ntagm", 
@@ -66,8 +66,8 @@ ggheatmap <- function(df, title = ""){
           axis.title.y = element_text(margin = margin(t = 0, r = -18, 
                                                       b = 0, l = 0))) +
     theme(axis.text.x=element_text(angle=45, vjust=1, hjust=1)) +
-    theme(text = element_text(size=24), 
-          legend.text = element_text(size=18),
+    theme(text = element_text(size=size), 
+          legend.text = element_text(size=size-1),
           axis.text.x  = element_text(colour = "black"),
           axis.text.y  = element_text(colour = "black")) +
     ggtitle(title)

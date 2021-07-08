@@ -1,27 +1,27 @@
-pdf(file = "../figures_thp_june2021/figures/cd14-unst.pdf", width = 12, height = 7)
-data <- unst
+# pdf(file = "../figures_thp_june2021/figures/cd14-unst.pdf", width = 12, height = 7)
+# data <- unst
+# # sampleNames(data) <- paste0(pData(data)$Tag, "_Replicate_", pData(data)$Replicate, "_Set", pData(data)$Set)
+# sampleNames(data) <- paste0(pData(data)$Fraction, "_", pData(data)$Tag, "_Set", pData(data)$Set, "_Rep_", pData(data)$Replicate)
+# .sel <- which(fData(data)$markers == "Plasma Membrane")
+# fData(data)$foi <- "unknown"  
+# fData(data)$foi[which(fData(data)$GN == "CD14")] <- "CD14"
+# fData(data)$foi[.sel] <- "Plasma Membrane"
+# col <- c("black", "#D55E00")
+# plotProfiles(data, fcol = "foi")
+# dev.off()
+# 
+# pdf(file = "../figures_thp_june2021/figures/cd14-lps.pdf", width = 12, height = 7)
+# data <- lps
+# # sampleNames(data) <- paste0(pData(data)$Tag, "_Replicate_", pData(data)$Replicate, "_Set", pData(data)$Set)
+# sampleNames(data) <- paste0(pData(data)$Fraction, "_", pData(data)$Tag, "_Set", pData(data)$Set, "_Rep_", pData(data)$Replicate)
+# .sel <- which(fData(data)$markers == "Plasma Membrane")
+# fData(data)$foi <- "unknown"  
+# fData(data)$foi[which(fData(data)$GN == "CD14")] <- "CD14"
+# fData(data)$foi[.sel] <- "Plasma Membrane"
+# col <- c("black", "#D55E00")
 # sampleNames(data) <- paste0(pData(data)$Tag, "_Replicate_", pData(data)$Replicate, "_Set", pData(data)$Set)
-sampleNames(data) <- paste0(pData(data)$Fraction, "_", pData(data)$Tag, "_Set", pData(data)$Set, "_Rep_", pData(data)$Replicate)
-.sel <- which(fData(data)$markers == "Plasma Membrane")
-fData(data)$foi <- "unknown"  
-fData(data)$foi[which(fData(data)$GN == "CD14")] <- "CD14"
-fData(data)$foi[.sel] <- "Plasma Membrane"
-col <- c("black", "#D55E00")
-plotProfiles(data, fcol = "foi")
-dev.off()
-
-pdf(file = "../figures_thp_june2021/figures/cd14-lps.pdf", width = 12, height = 7)
-data <- lps
-# sampleNames(data) <- paste0(pData(data)$Tag, "_Replicate_", pData(data)$Replicate, "_Set", pData(data)$Set)
-sampleNames(data) <- paste0(pData(data)$Fraction, "_", pData(data)$Tag, "_Set", pData(data)$Set, "_Rep_", pData(data)$Replicate)
-.sel <- which(fData(data)$markers == "Plasma Membrane")
-fData(data)$foi <- "unknown"  
-fData(data)$foi[which(fData(data)$GN == "CD14")] <- "CD14"
-fData(data)$foi[.sel] <- "Plasma Membrane"
-col <- c("black", "#D55E00")
-sampleNames(data) <- paste0(pData(data)$Tag, "_Replicate_", pData(data)$Replicate, "_Set", pData(data)$Set)
-plotProfiles(data, fcol = "foi")
-dev.off()
+# plotProfiles(data, fcol = "foi")
+# dev.off()
 
 plotProfiles <- function(data,
                          fcol = "foi",
