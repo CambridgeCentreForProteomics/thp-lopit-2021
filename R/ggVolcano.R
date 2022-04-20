@@ -104,8 +104,8 @@ ggVolcano <- function(x, mytitle = "", p = 0.01, highlight, N,
           # legend.title=element_text(size = legend.text.size, face = "bold", colour = "black"), 
           legend.key.height=unit(.5,"line"),
           axis.title=element_text(size = text.size, face="bold", colour = "black"),
-          axis.title.x = element_text(margin = unit(c(5, 0, 0, 0), "mm"), colour = "black"),
-          axis.title.y = element_text(margin = unit(c(0, 5, 0, 0), "mm"), colour = "black"),
+          axis.title.x = element_text(margin = unit(c(5, 0, 0, 0), "mm"), colour = "black", size = text.size),
+          axis.title.y = element_text(margin = unit(c(0, 5, 0, 0), "mm"), colour = "black", size = text.size),
           axis.ticks = element_line(colour = "black", size = 1),
           axis.text = element_text(color = "black", size = text.size),
           panel.background = element_blank(),
@@ -143,10 +143,11 @@ ggVolcano <- function(x, mytitle = "", p = 0.01, highlight, N,
       geom_label_repel(data = y,    
                        aes(label = GN, colour = Significance),    
                        size = label.text.size,   
-                       box.padding = unit(.4, "lines"),  
-                       point.padding = unit(1, "lines"),
+                       box.padding = unit(.2, "lines"),  
+                       point.padding = unit(.15, "lines"),
+                       label.padding = unit(.15, "lines"),
                        show.legend = FALSE,
-                       max.overlaps = N) + 
+                       max.overlaps = N + 10) + 
       ylab(bquote(-log[10]~'('*p-value*')')) +
       xlab(bquote(log[2]~"FC")) +
       scale_colour_manual(values = c("#C50000", 
@@ -158,10 +159,11 @@ ggVolcano <- function(x, mytitle = "", p = 0.01, highlight, N,
       geom_label_repel(data = y,    
                        aes(label = GN, colour = Significance),    
                        size = label.text.size,   
-                       box.padding = unit(.4, "lines"),  
-                       point.padding = unit(1, "lines"),
+                       box.padding = unit(.2, "lines"),  
+                       point.padding = unit(.15, "lines"),
+                       label.padding = unit(.15, "lines"),
                        show.legend = FALSE,
-                       max.overlaps = N) + 
+                       max.overlaps = N + 10) + 
       ylab(bquote(-log[10]~'('*p-value*')')) +
       xlab(bquote(log[2]~"FC")) +
       scale_colour_manual(values = c("#C50000", "#1B83E9"))

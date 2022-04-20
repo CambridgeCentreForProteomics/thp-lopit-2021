@@ -12,19 +12,20 @@ GObarplots <- function(filename, cols, N=25) {
   p <- ggplot(df, aes(x=name, y=adjPvalue, fill=name)) + 
     geom_bar(stat = "identity") +
     coord_flip() +
-    theme_light(base_size = 16) +
+    theme_light(base_size = 10) +
     scale_fill_manual(values = cols) +
     scale_x_discrete(limits = rev(positions)) +
     theme(axis.title.y=element_blank(), 
           legend.position = "none",
-          axis.text.y = element_text(color="black", 
-                                     size=16),
+          axis.text.y = element_blank(),
+          # axis.text.y = element_text(color="black", 
+                                     # size=10),
           axis.text.x = element_text(color="black", 
-                                     size=16)) +
+                                     size=10)) +
     ylab(bquote(-log[10]~'('*adj.*' '*p-value*')')) +
     # xlab("GO BP annotation") +
     geom_text(aes(label = Count), 
-              size = 6, 
+              size = 3, 
               color = "darkgrey",
               # position = position_dodge(width = 0.9),
               vjust = 0,

@@ -51,7 +51,7 @@ customChord <- function(msnset1,
                   labels.cex = .8,
                   major.tick.length = 1,
                   sector.index = sector.name,
-                  track.index = 2)
+                  trck.index = 2)
     }, bg.border = NA)
   } else {
     circos.trackPlotRegion(track.index = 1, panel.fun = function(x, y) {
