@@ -1,4 +1,4 @@
-plotLineGraph <- function(data, fun = c("mean", "median"), 
+plotLineGraph <- function(data, fun = "mean", 
                          showBars = FALSE, linecol = "#C50000",
                          .ylab = "Release (pg/ml)\n",
                          themeSize = 20) {

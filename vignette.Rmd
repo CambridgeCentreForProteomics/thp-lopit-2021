@@ -3119,10 +3119,6 @@ highlightOnPlot(object = tsne_lps, pch = 8, cex = 1.7,
                 args = list(lps))
 ```
 
-```{r includefig}
-knitr::include_graphics("figures/Screenshot-tls-sifig2.png")
-```
-
 #### Plot translocations on alluvial plots for each subset of proteins. 
 
 ```{r minialluvials, message=FALSE, warning=FALSE, fig.width=3, fig.height=10}
