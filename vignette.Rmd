@@ -65,7 +65,7 @@ The first step is to install the `pRoloc` and `pRolocdata` packages from Biocond
 ```{r getpkgs, eval=FALSE}
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
-BiocManager::install("pRoloc", "pRolocdata")
+BiocManager::install("pRoloc", "pRolocdata", "MSnbase")
 
 ## we also use the knitr and VennDiagram, ggplot2 packages in this 
 ## vignette so please  install if you do not have them 
@@ -81,6 +81,7 @@ Now we can load the packages by calling `library` function in R
 ```{r loadpkgs, eval=TRUE, warning=FALSE, message=FALSE}
 library("pRoloc")
 library("pRolocdata")
+library("MSnbase")
 ```
 
 and subsequently we can now access all the datasets in `pRolocdata`. To list all available datasets we use the `data` function. 
@@ -217,7 +218,7 @@ Type `?impute` in your R console for more information on missing values imputati
 
 Imputation is done using the `impute` function in `MSnbase`
 
-```{r imputepsms, message=FALSE, warning=FALSE}
+```{r imputepsms, message=FALSE, warning=FALSE, eval = TRUE}
 ## Split the data by replicate
 psms_rep1 <- psms[[1]]
 psms_rep2 <- psms[[2]]
@@ -233,16 +234,16 @@ fData(psms_rep1)$randna[26194] <- TRUE      # P04075
 psms_rep2 <- psms_rep2[-c(31435, 48162), ]
 
 ## replicate 1 imputation
-psms_rep1 <- impute(psms_rep1, "mixed", 
-                    randna = fData(psms_rep1)$randna, 
-                    mar = "knn",
-                    mnar = "MinDet")
+psms_rep1 <- MSnbase::impute(psms_rep1, "mixed", 
+                             randna = fData(psms_rep1)$randna, 
+                             mar = "knn",
+                             mnar = "MinDet")
 
 ## replicate 2 imputation                
-psms_rep2 <- impute(psms_rep2, "MinDet")
+psms_rep2 <- MSnbase::impute(psms_rep2, "MinDet")
 
 ## replicate 3 imputation
-psms_rep3 <- impute(psms_rep3, "MinDet")
+psms_rep3 <- MSnbase::impute(psms_rep3, "MinDet")
 
 ## Re-create MSnSetList of the data
 psms <- MSnSetList(list(rep1 = psms_rep1, rep2 = psms_rep2, rep3 = psms_rep3))
@@ -873,7 +874,7 @@ knitr::include_graphics("figures/naplot_lps.png")
 The above `naPlots` show that missing values tend to accumulate at the end of the gradient, and more specifically in the first few fractions of the gradient of each experiment, which classically reflect the gradient distribution e.g. PSMs that are often highly mitochondrial have a huge signal in the heavy channels but little elsewhere in the gradient and thus can result in missing values in the other channels. It is also common to find biologically relevant missing values such as those resulting from the absence of the low abundance of ions. As values do not appear to be missing at random we use a left-censored deterministic minimal value approach, `MinDet` in `MSnbase`.
 
 ```{r mindet, warning=FALSE, message=FALSE}
-psms.imputed <- lapply(psms, function(z) impute(z, method = "MinDet"))
+psms.imputed <- lapply(psms, function(z) MSnbase::impute(z, method = "MinDet"))
 ```
 
 PSMs were quality controlled post-imputation and then combined to protein level by calculating the median of all PSM intensities corresponding to the leading Uniprot Accession number for each protein group.
@@ -1321,11 +1322,17 @@ The heatmap below shows the sub-cellular distribution of proteins between the tw
 
 ```{r overlapAssignments, fig.width=14, fig.height=10, warning=FALSE, message=FALSE, fig.cap="Heatmap showing the distribution and overlap in organelle assignments between the TAGM classifications in the unstimulated data and classifications in the LPS-stimulated data"}
 source("R/intersection.R")
+
+## we make a copy of the prediction results
+fData(unst)$tagm.mcmc.allocation.pred <- fData(unst)$localisation.pred
+fData(lps)$tagm.mcmc.allocation.pred <- fData(lps)$localisation.pred
+
 ## Add a label to the LPS dataset so when we combine it  
 ## with the unstimulated the information is not lost
 .lps <- lps
 .lps <- updateFvarLabels(.lps, "LPS")
 cmb <- MSnbase::combine(unst, .lps)  # now combine all results
+
 
 df_all <- compareDatasets(cmb, 
                           fcol1 = "localisation.pred",
